@@ -1,0 +1,722 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--play-bg:#4a90e2;--task-bg:#5cb85c;--block-bg:#f0ad4e;--dark-bg:#2d2d2d;--darker-bg:#1e1e1e;--light-text:#e0e0e0;--dark-text:#333;}
+#root{display:flex;height:900px;border:1px solid #444;border-radius:8px;overflow:hidden;font-family: -apple-system, system-ui, sans-serif;background:var(--dark-bg);color:var(--light-text);}
+.pl{width:260px;background:var(--darker-bg);border-right:1px solid #555;display:flex;flex-direction:column;}
+.pc{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px;transition:background .2s ease;background:var(--dark-bg);}
+.pc.on{background:rgba(74,144,226,0.1);}
+.pr{width:400px;background:#0f0f0f;border-left:1px solid #333;display:flex;flex-direction:column;color:#d4d4d4;}
+.ph{padding:12px;font-size:11px;font-weight:bold;text-transform:uppercase;background:#333;border-bottom:1px solid #555;color:#ccc;}
+.plist{padding:10px;display:flex;flex-direction:column;gap:8px;}
+.bitem{padding:10px;background:#444;border:1px solid #666;border-radius:8px;cursor:grab;font-size:13px;font-weight:500;color:#fff;transition:background 0.2s;}
+.bitem:hover{background:#555;}
+.cblock{border-radius:12px;box-shadow:0 4px 8px rgba(0,0,0,0.3);margin-bottom:15px;overflow:hidden;border:2px solid transparent;}
+.cblock.play{background:linear-gradient(135deg, var(--play-bg), #357abd);border-color:#357abd;}
+.cblock.task{background:linear-gradient(135deg, var(--task-bg), #4cae4c);border-color:#4cae4c;}
+.cblock.block{background:linear-gradient(135deg, var(--block-bg), #d58512);border-color:#d58512;}
+.bhead{padding:12px 15px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;color:#fff;font-weight:600;}
+.bbody{padding:15px;background:rgba(255,255,255,0.05);}
+.f-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.f-label{width:90px;font-size:11px;font-weight:bold;color:#ccc;text-align:right;}
+.f-input{flex:1;padding:6px;border:1px solid #666;border-radius:4px;font-size:12px;background:#333;color:#fff;}
+.f-input:focus{border-color:#888;outline:none;}
+.dz{border:2px dashed #666;border-radius:8px;padding:10px;min-height:50px;margin-top:10px;background:rgba(255,255,255,0.05);color:#ccc;text-align:center;}
+.dz.on{background:rgba(74,144,226,0.1);border-color:var(--play-bg);}
+.nested-wrap{border-left:4px solid #555;margin-left:15px;padding-left:15px;position:relative;}
+.nested-wrap::before{content:'';position:absolute;left:-4px;top:0;bottom:0;width:4px;background:linear-gradient(to bottom, transparent, #555, transparent);}
+.yout{flex:1;padding:20px;font-family:'Consolas','Monaco',monospace;font-size:12px;white-space:pre;overflow:auto;}
+.btn-ui{padding:4px 8px;font-size:11px;cursor:pointer;background:#555;border:1px solid #777;border-radius:4px;color:#fff;}
+.btn-ui:hover{background:#666;}
+.btn-small{padding:4px 8px;font-size:11px;cursor:pointer;background:#444;color:#fff;border:1px solid #666;border-radius:4px;}
+.btn-small:hover{background:#555;}
+.btn-del{color:#ff6b6b;border-color:rgba(255,107,107,0.3);background:none;font-weight:bold;cursor:pointer;}
+.btn-toggle{background:none;border:none;color:#fff;font-size:14px;cursor:pointer;padding:0;margin-right:10px;}
+.status-box{padding:12px;min-height:60px;background:#0f0f0f;border-bottom:1px solid #333;color:#fff;}
+.status-box p{margin-bottom:8px;font-size:12px;}
+.status-box ul{margin-top:8px;padding-left:18px;font-size:12px;color:#f0a500;}
+.controls{display:flex;gap:6px;flex-wrap:wrap;}
+.controls button{margin-top:6px;}
+details summary{margin-top:10px; font-size:10px; color:#ccc; cursor:pointer; list-style:none; padding:5px 0;}
+details div{margin-left:5px;}
+</style>
+
+<div id="root">
+  <div class="pl">
+    <div class="ph">Library</div>
+    <div class="plist">
+      <div class="bitem" draggable="true" data-type="play">Play (Host Group)</div>
+      <details open>
+        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">ANSIBLE BUILTINS</summary>
+        <div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.shell">Shell Script</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.command">Command</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.copy">Copy</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.file">File</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.service">Service</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.template">Template</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.debug">Debug</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.assert">Assert</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.fail">Fail</div>
+        </div>
+      </details>
+      <details>
+        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">CISCO IOS</summary>
+        <div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_config">IOS Config</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_command">IOS Command</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_facts">IOS Facts</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_interfaces">IOS Interfaces</div>
+        </div>
+      </details>
+      <details>
+        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">CISCO NXOS</summary>
+        <div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_config">NXOS Config</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_command">NXOS Command</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_facts">NXOS Facts</div>
+          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_interfaces">NXOS Interfaces</div>
+        </div>
+      </details>
+      <details>
+        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">LOGIC</summary>
+        <div>
+          <div class="bitem" draggable="true" data-type="block">Logic Block (Try/Catch)</div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="pc" id="canvas" ondragenter="onDragOverZone(event, 'root', 'children')" ondragover="onDragOverZone(event, 'root', 'children')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, 'root')">
+    </div>
+
+  <div class="pr">
+    <div class="ph" style="background:#252526; border-bottom:1px solid #333; color:#aaa;">
+      Live YAML Output
+    </div>
+    <div class="status-box">
+      <div class="controls">
+        <button class="btn-small" onclick="downloadYaml()">Download YAML</button>
+        <button class="btn-small" onclick="saveState()">Save State</button>
+        <button class="btn-small" onclick="loadState()">Load State</button>
+        <button class="btn-small" onclick="clearState()">Clear State</button>
+        <button class="btn-small" onclick="exportState()">Export JSON</button>
+        <button class="btn-small" onclick="importState()">Import JSON</button>
+      </div>
+      <div id="warnings"></div>
+    </div>
+    <div class="yout" id="yaml-out"></div>
+    <input type="file" id="import-file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
+  </div>
+</div>
+
+<script>
+let state = [];
+let dragData = null;
+
+const DEFAULTS = {
+  play: { name: 'Configure Network', hosts: 'all', gather_facts: 'no', vars: [] },
+  task: { name: 'Execute Task', module: 'ansible.builtin.debug' },
+  block: { name: 'Main Logic Block' }
+};
+
+const MODULE_OPTIONS = [
+  { label: 'Cisco IOS Config', value: 'cisco.ios.ios_config' },
+  { label: 'Cisco NXOS Config', value: 'cisco.nxos.nxos_config' },
+  { label: 'Shell Script', value: 'ansible.builtin.shell' },
+  { label: 'Debug', value: 'ansible.builtin.debug' },
+  { label: 'Command', value: 'ansible.builtin.command' },
+  { label: 'Copy', value: 'ansible.builtin.copy' },
+  { label: 'File', value: 'ansible.builtin.file' },
+  { label: 'Service', value: 'ansible.builtin.service' },
+  { label: 'Template', value: 'ansible.builtin.template' },
+  { label: 'Assert', value: 'ansible.builtin.assert' },
+  { label: 'Fail', value: 'ansible.builtin.fail' },
+  { label: 'IOS Command', value: 'cisco.ios.ios_command' },
+  { label: 'IOS Facts', value: 'cisco.ios.ios_facts' },
+  { label: 'IOS Interfaces', value: 'cisco.ios.ios_interfaces' },
+  { label: 'NXOS Command', value: 'cisco.nxos.nxos_command' },
+  { label: 'NXOS Facts', value: 'cisco.nxos.nxos_facts' },
+  { label: 'NXOS Interfaces', value: 'cisco.nxos.nxos_interfaces' }
+];
+
+const MODULE_DEFAULT_PARAMS = {
+  'cisco.ios.ios_config': { lines: 'interface GigabitEthernet1/0/1\ndescription Configured by Ansible' },
+  'cisco.nxos.nxos_config': { lines: 'interface Ethernet1/1\ndescription Configured by Ansible' },
+  'ansible.builtin.shell': { cmd: 'echo hello' },
+  'ansible.builtin.debug': { msg: 'Debugging task' },
+  'ansible.builtin.command': { cmd: 'show version' },
+  'ansible.builtin.copy': { src: '/path/to/source', dest: '/path/to/dest' },
+  'ansible.builtin.file': { path: '/path/to/file', state: 'touch' },
+  'ansible.builtin.service': { name: 'httpd', state: 'started' },
+  'ansible.builtin.template': { src: 'template.j2', dest: '/path/to/dest' },
+  'ansible.builtin.assert': { that: 'some_condition' },
+  'ansible.builtin.fail': { msg: 'Task failed' },
+  'cisco.ios.ios_command': { commands: 'show version' },
+  'cisco.ios.ios_facts': { gather_subset: 'all' },
+  'cisco.ios.ios_interfaces': { config: [{ name: 'GigabitEthernet1/0/1', description: 'Configured by Ansible' }] },
+  'cisco.nxos.nxos_command': { commands: 'show version' },
+  'cisco.nxos.nxos_facts': { gather_subset: 'all' },
+  'cisco.nxos.nxos_interfaces': { config: [{ name: 'Ethernet1/1', description: 'Configured by Ansible' }] }
+};
+
+document.querySelectorAll('.bitem').forEach(el => {
+  el.ondragstart = (e) => {
+    dragData = { type: el.dataset.type, module: el.dataset.mod };
+  };
+});
+
+function drop(e, parentId, section = 'children') {
+  e.preventDefault(); e.stopPropagation();
+  if (!dragData) return;
+  const newItem = {
+    id: 'id_' + Math.random().toString(36).substr(2, 9),
+    type: dragData.type,
+    params: { ...DEFAULTS[dragData.type] },
+    moduleArgs: dragData.type === 'task' ? { ...(MODULE_DEFAULT_PARAMS[dragData.module] || {}) } : {},
+    custom: [],
+    vars: [],
+    when: '',
+    tags: '',
+    become: '',
+    children: [],
+    rescue: [],
+    always: []
+  };
+  if (dragData.module) {
+    newItem.params = {
+      ...newItem.params,
+      module: dragData.module
+    };
+  }
+
+  if (parentId === 'root') {
+    if (!canDropOn('root', 'children')) {
+      alert('Only plays may be added at the top level.');
+      return;
+    }
+    state.push(newItem);
+  } else {
+    const parent = findById(state, parentId);
+    if (!parent || !canDropOn(parent.type, section)) {
+      return;
+    }
+    if (section === 'rescue') parent.rescue.push(newItem);
+    else if (section === 'always') parent.always.push(newItem);
+    else parent.children.push(newItem);
+  }
+  render();
+  dragData = null;
+}
+
+function canDropOn(parentType, section) {
+  if (!dragData) return false;
+  if (parentType === 'root') return dragData.type === 'play';
+  if (section === 'children') return parentType !== 'task';
+  return parentType === 'block';
+}
+
+function onDragOverZone(e, parentType, section) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  if (canDropOn(parentType, section)) {
+    target.classList.add('on');
+  } else {
+    target.classList.remove('on');
+  }
+}
+
+function onDragLeaveZone(e) {
+  e.currentTarget.classList.remove('on');
+}
+
+function downloadYaml() {
+  const yamlText = document.getElementById('yaml-out').textContent;
+  const blob = new Blob([yamlText], { type: 'text/yaml;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'playbook.yml';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+function yamlValue(value, indent) {
+  if (typeof value === 'string' && value.includes('\n')) {
+    const lines = value.split('\n');
+    return `|\n${lines.map(line => ' '.repeat(indent) + line).join('\n')}\n`;
+  }
+  return String(value);
+}
+
+function yamlSerialize(obj, indent = 0, afterDash = false) {
+  let res = '';
+  const space = ' '.repeat(indent);
+  if (Array.isArray(obj)) {
+    obj.forEach(item => {
+      res += `${space}- ${yamlSerialize(item, indent + 2, true)}\n`;
+    });
+  } else if (typeof obj === 'object' && obj !== null) {
+    let first = true;
+    Object.entries(obj).forEach(([k, v]) => {
+      const lineSpace = afterDash && first ? '' : space;
+      first = false;
+      if (Array.isArray(v)) {
+        res += `${lineSpace}${k}:\n`;
+        v.forEach(item => {
+          res += `${space}  - ${yamlSerialize(item, indent + 2, true)}\n`;
+        });
+      } else if (typeof v === 'object' && v !== null) {
+        res += `${lineSpace}${k}:\n${yamlSerialize(v, indent + 2, false)}`;
+      } else {
+        const formatted = yamlValue(v, indent + 2);
+        if (typeof v === 'string' && v.includes('\n')) {
+          res += `${lineSpace}${k}: ${formatted}`;
+        } else {
+          res += `${lineSpace}${k}: ${formatted}\n`;
+        }
+      }
+    });
+  } else {
+    return yamlValue(obj, indent);
+  }
+  return res;
+}
+
+function changeTaskModule(itemId, module) {
+  const item = findById(state, itemId);
+  if (!item) return;
+  item.params.module = module;
+  item.moduleArgs = { ...(MODULE_DEFAULT_PARAMS[module] || {}) };
+  render();
+}
+
+function saveToLocalStorage() {
+  try {
+    localStorage.setItem('ansiblePlaybookBuilderState', JSON.stringify(state));
+  } catch (error) {
+    console.warn('LocalStorage save failed', error);
+  }
+}
+
+function saveState() {
+  saveToLocalStorage();
+  updateWarnings('Saved current builder state locally.');
+}
+
+function loadState() {
+  const saved = localStorage.getItem('ansiblePlaybookBuilderState');
+  if (!saved) {
+    updateWarnings('No saved state found.');
+    return;
+  }
+  try {
+    state = JSON.parse(saved);
+    normalizeState(state);
+    render();
+    updateWarnings('Loaded saved state.');
+  } catch (error) {
+    updateWarnings('Failed to load saved state. JSON was invalid.');
+  }
+}
+
+function clearState() {
+  state = [];
+  localStorage.removeItem('ansiblePlaybookBuilderState');
+  render();
+  updateWarnings('Cleared builder state.');
+}
+
+function exportState() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'ansible-builder-state.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+function importState() {
+  const fileInput = document.getElementById('import-file');
+  if (fileInput) fileInput.click();
+}
+
+function handleImportFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      state = imported;
+      normalizeState(state);
+      render();
+      updateWarnings('Imported builder state.');
+    } catch (error) {
+      updateWarnings('Invalid JSON file. Import failed.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function updateWarnings(message) {
+  const warningsContainer = document.getElementById('warnings');
+  const warnings = [];
+  state.forEach(play => {
+    if (!play.children.length) {
+      warnings.push(`Play "${play.params.name}" has no tasks.`);
+    }
+    play.custom.forEach(c => {
+      if (!c.k) warnings.push(`Play "${play.params.name}" has an empty custom parameter name.`);
+    });
+    (play.vars || []).forEach(v => {
+      if (!v.k) warnings.push(`Play "${play.params.name}" has a var with an empty name.`);
+    });
+    walkItems(play.children, item => {
+      if (item.type === 'task') {
+        if (!item.params.module) warnings.push(`Task "${item.params.name}" is missing a module.`);
+        if (item.children.length || item.rescue.length || item.always.length) warnings.push(`Task "${item.params.name}" has unsupported nested content.`);
+      }
+      if (item.type === 'block' && !item.children.length && !item.rescue.length && !item.always.length) {
+        warnings.push(`Block "${item.params.name}" is empty.`);
+      }
+      item.custom.forEach(c => {
+        if (!c.k) warnings.push(`Item "${item.params.name}" has an empty custom parameter name.`);
+      });
+    });
+  });
+  let html = message ? `<p>${message}</p>` : '';
+  if (warnings.length) {
+    html += `<p>Warnings:</p><ul>` + warnings.map(w => `<li>${w}</li>`).join('') + `</ul>`;
+  } else if (!message) {
+    html += '<p>No warnings detected.</p>';
+  }
+  warningsContainer.innerHTML = html;
+}
+
+function walkItems(items, callback) {
+  items.forEach(item => {
+    callback(item);
+    walkItems(item.children, callback);
+    walkItems(item.rescue, callback);
+    walkItems(item.always, callback);
+  });
+}
+
+function findById(arr, id) {
+  for (let item of arr) {
+    if (item.id === id) return item;
+    let found = findById(item.children, id) || findById(item.rescue, id) || findById(item.always, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function addParam(id) {
+  const item = findById(state, id);
+  const key = prompt("Parameter name (e.g., lines, parents, state):");
+  if (!key) return;
+  const value = prompt(`Value for ${key}:`);
+  item.custom.push({ k: key, v: value ?? '' });
+  render();
+}
+
+function removeParam(itemId, index) {
+  const item = findById(state, itemId);
+  if (!item) return;
+  item.custom.splice(index, 1);
+  render();
+}
+
+function addVar(id) {
+  const item = findById(state, id);
+  const key = prompt("Var name:");
+  if (!key) return;
+  const value = prompt(`Value for ${key}:`);
+  item.vars.push({ k: key, v: value ?? '' });
+  render();
+}
+
+function removeVar(itemId, index) {
+  const item = findById(state, itemId);
+  if (!item) return;
+  item.vars.splice(index, 1);
+  render();
+}
+
+function addModuleArg(id) {
+  const item = findById(state, id);
+  const key = prompt("Module argument name:");
+  if (!key) return;
+  const value = prompt(`Value for ${key}:`);
+  item.moduleArgs[key] = value ?? '';
+  render();
+}
+
+function removeModuleArg(itemId, key) {
+  const item = findById(state, itemId);
+  if (!item) return;
+  delete item.moduleArgs[key];
+  render();
+}
+
+function deleteItem(id) {
+  const remove = (arr) => {
+    const idx = arr.findIndex(x => x.id === id);
+    if (idx > -1) { arr.splice(idx, 1); return true; }
+    return arr.some(x => remove(x.children) || remove(x.rescue) || remove(x.always));
+  }
+  remove(state);
+  render();
+}
+
+function toggleBlock(btn) {
+  const block = btn.closest('.cblock');
+  const body = block.querySelector('.bbody');
+  const isCollapsed = body.style.display === 'none';
+  body.style.display = isCollapsed ? '' : 'none';
+  btn.textContent = isCollapsed ? '▼' : '▶';
+}
+
+function render() {
+  const canvas = document.getElementById('canvas');
+  canvas.innerHTML = state.length ? '' : '<div style="color:#999; text-align:center; padding-top:100px;">Drag a Play here to start</div>';
+  state.forEach(item => canvas.appendChild(buildUI(item)));
+  genYaml();
+  updateWarnings();
+  saveToLocalStorage();
+}
+
+function buildUI(item) {
+  const div = document.createElement('div');
+  div.className = 'cblock ' + item.type;
+  let html = `<div class="bhead">
+    <button class="btn-toggle" onclick="toggleBlock(this)">▼</button>
+    <span><strong>${item.type.toUpperCase()}</strong>: ${item.params.module || ''}</span>
+    <button class="btn-del" onclick="deleteItem('${item.id}')">×</button>
+  </div><div class="bbody">`;
+
+  // Standard Fields
+  for (let [k, v] of Object.entries(item.params)) {
+    if (item.type === 'task' && k === 'module') {
+      html += `<div class="f-row"><span class="f-label">Module</span><select class="f-input" onchange="changeTaskModule('${item.id}', this.value)">`;
+      MODULE_OPTIONS.forEach(opt => {
+        html += `<option value="${opt.value}" ${opt.value === v ? 'selected' : ''}>${opt.label}</option>`;
+      });
+      html += `</select></div>`;
+    } else if (item.type === 'task' && k !== 'name') {
+      html += `<div class="f-row"><span class="f-label">${k}</span><textarea class="f-input" oninput="findById(state, '${item.id}').params['${k}']=this.value; genYaml()">${v}</textarea></div>`;
+    } else {
+      html += `<div class="f-row"><span class="f-label">${k}</span>
+        <input class="f-input" value="${v}" oninput="findById(state, '${item.id}').params['${k}']=this.value; genYaml()"></div>`;
+    }
+  }
+
+  // Custom Fields
+  item.custom.forEach((c, i) => {
+    html += `<div class="f-row"><span class="f-label">${c.k}</span>
+      <textarea class="f-input" oninput="findById(state, '${item.id}').custom[${i}].v=this.value; genYaml()">${c.v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeParam('${item.id}', ${i})">×</button></div>`;
+  });
+
+  if (item.type === 'task') {
+    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Module Arguments</div>`;
+    Object.entries(item.moduleArgs || {}).forEach(([k, v]) => {
+      html += `<div class="f-row"><span class="f-label">${k}</span>
+        <textarea class="f-input" oninput="findById(state, '${item.id}').moduleArgs[${JSON.stringify(k)}]=this.value; genYaml()">${v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeModuleArg('${item.id}', ${JSON.stringify(k)})">×</button></div>`;
+    });
+    html += `<button class="btn-ui" onclick="addModuleArg('${item.id}')">+ Add Module Arg</button>`;
+    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Task Metadata</div>`;
+    html += `<div class="f-row"><span class="f-label">when</span>
+      <textarea class="f-input" oninput="findById(state, '${item.id}').when=this.value; genYaml()">${item.when}</textarea></div>`;
+    html += `<div class="f-row"><span class="f-label">tags</span>
+      <input class="f-input" value="${item.tags}" oninput="findById(state, '${item.id}').tags=this.value; genYaml()"></div>`;
+    html += `<div class="f-row"><span class="f-label">become</span>
+      <input class="f-input" value="${item.become}" oninput="findById(state, '${item.id}').become=this.value; genYaml()"></div>`;
+  }
+
+  html += `<button class="btn-ui" onclick="addParam('${item.id}')">+ Custom Parameter</button>`;
+
+  if (item.type === 'block') {
+    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Block Metadata</div>`;
+    html += `<div class="f-row"><span class="f-label">when</span>
+      <textarea class="f-input" oninput="findById(state, '${item.id}').when=this.value; genYaml()">${item.when}</textarea></div>`;
+    html += `<div class="f-row"><span class="f-label">tags</span>
+      <input class="f-input" value="${item.tags}" oninput="findById(state, '${item.id}').tags=this.value; genYaml()"></div>`;
+    html += `<div class="f-row"><span class="f-label">become</span>
+      <input class="f-input" value="${item.become}" oninput="findById(state, '${item.id}').become=this.value; genYaml()"></div>`;
+    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Block Vars</div>`;
+    item.vars.forEach((v, i) => {
+      html += `<div class="f-row"><span class="f-label">${v.k}</span>
+        <textarea class="f-input" oninput="findById(state, '${item.id}').vars[${i}].v=this.value; genYaml()">${v.v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeVar('${item.id}', ${i})">×</button></div>`;
+    });
+    html += `<button class="btn-ui" onclick="addVar('${item.id}')">+ Add Block Var</button>`;
+  }
+
+  if (item.type === 'play') {
+    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Play Vars</div>`;
+    item.vars.forEach((v, i) => {
+      html += `<div class="f-row"><span class="f-label">${v.k}</span>
+        <textarea class="f-input" oninput="findById(state, '${item.id}').vars[${i}].v=this.value; genYaml()">${v.v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeVar('${item.id}', ${i})">×</button></div>`;
+    });
+    html += `<button class="btn-ui" onclick="addVar('${item.id}')">+ Add Play Var</button>`;
+  }
+
+  // Recursive Containers
+  const canHaveChildren = item.type !== 'task';
+  const canHaveRescue = item.type === 'block';
+  html += `<div class="nested-wrap">`;
+  html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px;">Tasks / Block Content</div>`;
+  if (canHaveChildren) {
+    html += `<div class="dz" ondragenter="onDragOverZone(event, '${item.type}', 'children')" ondragover="onDragOverZone(event, '${item.type}', 'children')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, '${item.id}', 'children')"></div>`;
+  } else {
+    html += `<div style="color:#999; margin-top:10px; font-size:12px;">Tasks cannot contain nested tasks or blocks.</div>`;
+  }
+  if (canHaveRescue) {
+    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:red;">Rescue (On Failure)</div>`;
+    html += `<div class="dz" ondragenter="onDragOverZone(event, '${item.type}', 'rescue')" ondragover="onDragOverZone(event, '${item.type}', 'rescue')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, '${item.id}', 'rescue')"></div>`;
+    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:orange;">Always</div>`;
+    html += `<div class="dz" ondragenter="onDragOverZone(event, '${item.type}', 'always')" ondragover="onDragOverZone(event, '${item.type}', 'always')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, '${item.id}', 'always')"></div>`;
+  }
+  html += `</div></div>`;
+
+  div.innerHTML = html;
+  // Recursively append children
+  const containers = div.querySelectorAll('.dz');
+  let dzIndex = 0;
+  if (canHaveChildren) {
+    item.children.forEach(c => containers[dzIndex].appendChild(buildUI(c)));
+    dzIndex += 1;
+  }
+  if (canHaveRescue) {
+    item.rescue.forEach(c => containers[dzIndex].appendChild(buildUI(c)));
+    dzIndex += 1;
+    item.always.forEach(c => containers[dzIndex].appendChild(buildUI(c)));
+  }
+  
+  return div;
+}
+
+function buildPlaybookObject() {
+  return state.map(play => {
+    const p = {
+      name: play.params.name,
+      hosts: play.params.hosts,
+      gather_facts: play.params.gather_facts
+    };
+    if (play.vars && play.vars.length) {
+      p.vars = {};
+      play.vars.forEach(v => p.vars[v.k] = v.v);
+    }
+    play.custom.forEach(c => p[c.k] = c.v);
+    if (play.children.length) {
+      p.tasks = play.children.map(c => buildItemObject(c));
+    }
+    return p;
+  });
+}
+
+function buildItemObject(item) {
+  if (item.type === 'task') {
+    const t = {
+      name: item.params.name,
+      [item.params.module]: item.moduleArgs
+    };
+    item.custom.forEach(c => t[c.k] = c.v);
+    if (item.when) t.when = item.when;
+    if (item.tags) t.tags = item.tags;
+    if (item.become) t.become = item.become;
+    return t;
+  }
+  if (item.type === 'block') {
+    const b = { block: item.children.map(c => buildItemObject(c)) };
+    if (item.when) b.when = item.when;
+    if (item.tags) b.tags = item.tags;
+    if (item.become) b.become = item.become;
+    if (item.vars && item.vars.length) {
+      b.vars = {};
+      item.vars.forEach(v => b.vars[v.k] = v.v);
+    }
+    item.custom.forEach(c => b[c.k] = c.v);
+    if (item.rescue.length) b.rescue = item.rescue.map(c => buildItemObject(c));
+    if (item.always.length) b.always = item.always.map(c => buildItemObject(c));
+    return b;
+  }
+  return { '#': `Unsupported item type: ${item.type}` };
+}
+
+function genYaml() {
+  const playbook = buildPlaybookObject();
+  let y = "---\n" + yamlSerialize(playbook, 0, false);
+  document.getElementById('yaml-out').textContent = y;
+}
+
+function yamlSerialize(obj, indent = 0) {
+  let res = '';
+  const space = ' '.repeat(indent);
+  if (Array.isArray(obj)) {
+    obj.forEach(item => {
+      res += `${space}- ${yamlSerialize(item, 0).trim()}\n`;
+    });
+  } else if (typeof obj === 'object' && obj !== null) {
+    Object.entries(obj).forEach(([k, v]) => {
+      if (Array.isArray(v)) {
+        res += `${space}${k}:\n`;
+        v.forEach(item => {
+          res += `${space}  - ${yamlSerialize(item, 0).trim()}\n`;
+        });
+      } else if (typeof v === 'object' && v !== null) {
+        res += `${space}${k}:\n${yamlSerialize(v, indent + 2)}`;
+      } else {
+        const formatted = yamlValue(v, indent + 2);
+        if (typeof v === 'string' && v.includes('\n')) {
+          res += `${space}${k}: ${formatted}`;
+        } else {
+          res += `${space}${k}: ${formatted}\n`;
+        }
+      }
+    });
+  } else {
+    return yamlValue(obj, indent);
+  }
+  return res;
+}
+
+function normalizeItem(item) {
+  item.custom = item.custom || [];
+  item.vars = item.vars || [];
+  item.moduleArgs = item.moduleArgs || {};
+  item.children = item.children || [];
+  item.rescue = item.rescue || [];
+  item.always = item.always || [];
+  item.params = item.params || {};
+  item.when = item.when || '';
+  item.tags = item.tags || '';
+  item.become = item.become || '';
+  item.children.forEach(normalizeItem);
+  item.rescue.forEach(normalizeItem);
+  item.always.forEach(normalizeItem);
+}
+
+function normalizeState(stateArray) {
+  (stateArray || []).forEach(normalizeItem);
+}
+
+function initBuilder() {
+  const saved = localStorage.getItem('ansiblePlaybookBuilderState');
+  if (saved) {
+    try {
+      state = JSON.parse(saved);
+      normalizeState(state);
+    } catch (error) {
+      console.warn('Invalid saved state skipped', error);
+    }
+  }
+  render();
+}
+
+initBuilder();
+</script>
