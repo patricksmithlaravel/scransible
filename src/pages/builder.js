@@ -62,6 +62,8 @@
         if (payload.preset) {
           play.kw.connection = 'ansible.netcommon.network_cli';
           play.kw.gather_facts = false;
+          // IOS configuration needs enable mode; NX-OS logins are already privileged.
+          if (payload.preset === 'cisco.ios.ios') Object.assign(play.kw, { become: true, become_method: 'enable' });
           play.vars.push(SX.newVar('ansible_network_os', payload.preset));
         }
         return play;
@@ -386,7 +388,7 @@
       notifyCount: handler => {
         let count = 0;
         if (!play) return 0;
-        const names = [handler.name, handler.kw.listen].filter(Boolean).map(String);
+        const names = [handler.name, ...[].concat(handler.kw.listen || [])].filter(Boolean).map(String);
         SX.walk(['pre_tasks', 'tasks', 'post_tasks', 'handlers'].flatMap(s => play[s]), n => {
           if ([].concat(n.kw?.notify || []).some(t => names.includes(String(t)))) count++;
         });
@@ -411,7 +413,7 @@
     const ctx = blockContext(null);
     ctx.handlers = SX.handlerNames({ handlers: role.handlers });
     ctx.notifyCount = handler => {
-      const names = [handler.name, handler.kw.listen].filter(Boolean).map(String);
+      const names = [handler.name, ...[].concat(handler.kw.listen || [])].filter(Boolean).map(String);
       let count = 0;
       SX.walk([...role.tasks, ...role.handlers], n => { if ([].concat(n.kw?.notify || []).some(t => names.includes(String(t)))) count++; });
       return count;
@@ -774,19 +776,52 @@
     if (dropped.length) ui.toast(`${moduleName} has no ${dropped.join(', ')} option, so ${dropped.length > 1 ? 'they were' : 'it was'} removed.`, { action: { label: 'Undo', onClick: () => store.undo() } });
   }
 
-  function keywordEditor(node, key) {
+  // The value an enclosing block or the play sets for a keyword, if any.
+  function inheritedKeyword(id, key) {
+    let loc = SX.locate(project(), id);
+    while (loc?.owner?.type) {
+      const owner = loc.owner;
+      if (owner.kw && owner.kw[key] !== undefined && owner.kw[key] !== '') {
+        return { value: owner.kw[key], from: owner.type === 'play' ? 'play' : `block${owner.name ? ` “${owner.name}”` : ''}` };
+      }
+      if (owner.type === 'play') break;
+      loc = SX.locate(project(), owner.id);
+    }
+    return null;
+  }
+
+  // Long keyword names wrap at underscores (become_ / method) rather than mid-word.
+  const breakable = name => name.split('_').flatMap((part, i) => (i ? ['_', el('wbr'), part] : [part]));
+
+  // A text input with suggestions (become_method, connection, ...) or a select for fixed choices.
+  function suggestedControl(spec, value, set, key, placeholder) {
+    if (spec.kind === 'choice') {
+      const options = [...new Set([...(value ? [String(value)] : []), ...spec.suggest])];
+      const select = ui.select([['', placeholder || '—'], ...options.map(o => [o, o])], value ?? '', v => set(v), { cls: 'select' });
+      select.disabled = readOnly();
+      select.dataset.focus = `kw:${key}`;
+      return select;
+    }
+    const listId = `suggest-${key}`;
+    return el('div', {}, [
+      input(value, set, { focusKey: `kw:${key}`, list: listId, placeholder }),
+      el('datalist', { id: listId }, spec.suggest.map(v => el('option', { value: v })))
+    ]);
+  }
+
+  function keywordEditor(node, key, { removable = true, placeholder } = {}) {
     const spec = SX.keywordSpec(key);
     const value = node.kw[key];
     const typingKey = `${node.id}:kw:${key}`;
-    const set = next => inspectorEdit(node.id, n => { n.kw[key] = next; }, typingKey);
-    const removeBtn = readOnly() ? null : el('button', { class: 'icon-btn sm kw-remove', type: 'button', title: `Remove ${key}`, attrs: { 'aria-label': `Remove ${key}` }, onclick: () => inspectorEdit(node.id, n => { delete n.kw[key]; }) }, icon('x', 11));
+    const set = next => inspectorEdit(node.id, n => { if (next === '' && !removable) delete n.kw[key]; else n.kw[key] = next; }, typingKey);
+    const removeBtn = readOnly() || !removable ? null : el('button', { class: 'icon-btn sm kw-remove', type: 'button', title: `Remove ${key}`, attrs: { 'aria-label': `Remove ${key}` }, onclick: () => inspectorEdit(node.id, n => { delete n.kw[key]; }) }, icon('x', 11));
     let control;
     if (spec.kind === 'handlers') {
       const play = SX.playOf(project(), node.id);
       const handlers = play ? SX.handlerNames(play) : SX.handlerNames({ handlers: project().roles.find(r => SX.locate({ playbooks: [], roles: [r] }, node.id))?.handlers || [] });
-      const current = [].concat(value || []);
+      const current = [].concat(value || []).filter(Boolean);
       control = el('div', { class: 'chip-row' }, [
-        ...current.map((h, i) => el('span', { class: 'chip notify' }, [h, readOnly() ? null : el('button', { type: 'button', attrs: { 'aria-label': `Remove ${h}` }, onclick: () => inspectorEdit(node.id, n => { const list = [].concat(n.kw.notify); list.splice(i, 1); if (list.length) n.kw.notify = list; else delete n.kw.notify; }) }, icon('x', 10))])),
+        ...current.map((h, i) => el('span', { class: 'chip notify' }, [h, readOnly() ? null : el('button', { type: 'button', attrs: { 'aria-label': `Remove ${h}` }, onclick: () => inspectorEdit(node.id, n => { const list = [].concat(n.kw.notify).filter(Boolean); list.splice(i, 1); if (list.length) n.kw.notify = list; else delete n.kw.notify; }) }, icon('x', 10))])),
         readOnly() ? null : ui.select([['', '+ handler'], ...handlers.filter(h => !current.includes(h)).map(h => [h, h]), ['__new__', 'New handler…']], '', async v => {
           if (!v) return;
           if (v === '__new__') {
@@ -807,19 +842,20 @@
         }, { cls: 'select', label: 'Add a handler to notify' })
       ]);
     } else if (spec.kind === 'list') {
-      const current = [].concat(value || []);
+      const current = [].concat(value || []).filter(v => v !== '');
       const add = el('input', {
         class: 'chip-input', placeholder: '+ add', attrs: { 'aria-label': `Add to ${key}` }, readOnly: readOnly(),
         onkeydown: e => {
           if (e.key !== 'Enter' && e.key !== ',') return;
           e.preventDefault();
           const v = e.target.value.trim();
-          if (v) inspectorEdit(node.id, n => { n.kw[key] = [...[].concat(n.kw[key] || []), v]; });
+          state.focus = `kw:${key}`;
+          if (v) inspectorEdit(node.id, n => { n.kw[key] = [...[].concat(n.kw[key] || []).filter(x => x !== ''), v]; });
         }
       });
       add.dataset.focus = `kw:${key}`;
       control = el('div', { class: 'chip-row' }, [
-        ...current.map((t, i) => el('span', { class: 'chip removable' }, [String(t), readOnly() ? null : el('button', { type: 'button', attrs: { 'aria-label': `Remove ${t}` }, onclick: () => inspectorEdit(node.id, n => { const list = [].concat(n.kw[key]); list.splice(i, 1); n.kw[key] = list; }) }, icon('x', 10))])),
+        ...current.map((t, i) => el('span', { class: 'chip removable' }, [String(t), readOnly() ? null : el('button', { type: 'button', attrs: { 'aria-label': `Remove ${t}` }, onclick: () => inspectorEdit(node.id, n => { const list = [].concat(n.kw[key]); list.splice(i, 1); if (list.length || removable) n.kw[key] = list; else delete n.kw[key]; }) }, icon('x', 10))])),
         readOnly() ? null : add
       ]);
     } else if (spec.kind === 'bool') {
@@ -833,39 +869,121 @@
         class: 'textarea', value: A.isEmpty(value) ? '' : window.jsyaml.dump(value, A.yamlOptions()).trimEnd(), rows: 3, readOnly: readOnly(), placeholder: 'YAML',
         oninput: e => { try { set(e.target.value.trim() ? window.jsyaml.load(e.target.value, { schema: window.jsyaml.CORE_SCHEMA }) : ''); e.target.classList.remove('invalid'); } catch (error) { e.target.classList.add('invalid'); } }
       });
+    } else if (spec.suggest) {
+      control = suggestedControl(spec, value, set, key, placeholder);
     } else {
-      control = input(value, set, { focusKey: `kw:${key}`, placeholder: spec.kind === 'cond' ? "app_env == 'production'" : spec.kind === 'expr' ? '{{ items }}' : '' });
+      control = input(value, set, { focusKey: `kw:${key}`, placeholder: placeholder || (spec.kind === 'cond' ? "app_env == 'production'" : spec.kind === 'expr' ? '{{ items }}' : '') });
     }
-    if (control.dataset && !control.dataset.focus) control.dataset.focus = `kw:${key}`;
-    return [el('label', { text: key }), el('div', { style: 'display: flex; gap: 6px; align-items: center; min-width: 0' }, [el('div', { style: 'flex: 1; min-width: 0' }, control), removeBtn])];
+    if (control.dataset && !control.dataset.focus && !control.querySelector?.('[data-focus]')) control.dataset.focus = `kw:${key}`;
+    return [
+      el('label', { title: spec.doc || (spec.unknown ? 'Not a keyword Ansible documents' : undefined) }, breakable(key)),
+      el('div', { style: 'display: flex; gap: 6px; align-items: center; min-width: 0' }, [el('div', { style: 'flex: 1; min-width: 0' }, control), removeBtn])
+    ];
   }
 
-  function keywordsSection(node, setName, exclude = []) {
-    const present = Object.keys(node.kw).filter(k => !exclude.includes(k));
-    const quick = setName === 'task' ? [['when', '+ Add condition'], ['register', '+ Save result as variable']] : setName === 'block' ? [['when', '+ Add condition']] : [];
+  // Rows the reference shows on every task (notify, tags, when, become, register), and
+  // the ones that apply to blocks and roles.
+  const PINNED = { task: ['notify', 'tags', 'when', 'become', 'register'], handler: ['listen', 'notify', 'when', 'become'], block: ['when', 'tags', 'become'], role: ['when', 'tags', 'become'], play: [] };
+  const PRIVILEGE = ['become_user', 'become_method', 'become_flags', 'become_exe'];
+  const PRIVILEGE_DEFAULTS = { become_user: 'root', become_method: 'sudo' };
+  const GROUP_ORDER = ['Conditions & loops', 'Privilege escalation', 'Where and how it runs', 'Results and handlers', 'Facts', 'Variables and defaults'];
+
+  function becomeRow(node) {
+    const inherited = inheritedKeyword(node.id, 'become');
+    const inheritedOn = inherited ? A.typedScalar(inherited.value) === true : false;
+    const inheritLabel = inherited ? `Inherit from ${inherited.from} (${inheritedOn ? 'yes' : 'no'})` : 'Inherit (not set, so no)';
+    const set = node.kw.become !== undefined && node.kw.become !== '';
+    const select = ui.select([['', inheritLabel], ['true', 'yes'], ['false', 'no']], set ? String(A.typedScalar(node.kw.become) === true) : '',
+      v => inspectorEdit(node.id, n => { if (v === '') delete n.kw.become; else n.kw.become = v === 'true'; }), { cls: 'select', label: 'become' });
+    select.disabled = readOnly();
+    select.dataset.focus = 'kw:become';
+    return {
+      rows: [el('label', { text: 'become', title: SX.keywordSpec('become').doc }), select],
+      on: set ? A.typedScalar(node.kw.become) === true : inheritedOn
+    };
+  }
+
+  // Privilege escalation details: shown whenever become is on (here or inherited), with
+  // the inherited or default value as the placeholder.
+  function privilegeRows(node, keys = ['become_user', 'become_method'], exclude = []) {
     const rows = [];
-    for (const key of present) rows.push(...keywordEditor(node, key));
-    if (!readOnly()) {
-      for (const [key, label] of quick) {
-        if (present.includes(key)) continue;
-        rows.push(el('span', { text: key }), el('button', { class: 'dashed-btn', type: 'button', text: label, onclick: () => { state.focus = `kw:${key}`; inspectorEdit(node.id, n => { n.kw[key] = ''; }); } }));
-      }
+    for (const key of PRIVILEGE) {
+      const present = node.kw[key] !== undefined;
+      if (exclude.includes(key) || (!present && !keys.includes(key))) continue;
+      const inherited = inheritedKeyword(node.id, key);
+      const placeholder = inherited ? `inherits ${inherited.value} from ${inherited.from}` : PRIVILEGE_DEFAULTS[key] ? `${PRIVILEGE_DEFAULTS[key]} (default)` : '';
+      rows.push(...keywordEditor(node, key, { removable: present, placeholder }));
     }
-    const remaining = SX.KEYWORD_SETS[setName].filter(k => !present.includes(k) && !exclude.includes(k) && !quick.some(([q]) => q === k));
-    return el('div', { class: 'panel-section' }, [
-      el('h3', { class: 'panel-title', text: setName === 'play' ? 'Play keywords' : setName === 'block' ? 'Block keywords' : setName === 'role' ? 'Role keywords' : 'Task keywords' }),
-      rows.length ? el('div', { class: 'kw-grid' }, rows) : null,
-      readOnly() ? null : ui.select([['', '+ Add keyword…'], ...remaining.map(k => [k, k]), ['__other__', 'Other…']], '', async v => {
+    return rows;
+  }
+
+  function addKeywordMenu(node, setName, hidden) {
+    const remaining = SX.keywordsFor(setName).filter(k => !hidden.has(k));
+    const byGroup = new Map();
+    for (const key of remaining) {
+      const group = SX.keywordSpec(key).group || 'More';
+      if (!byGroup.has(group)) byGroup.set(group, []);
+      byGroup.get(group).push(key);
+    }
+    const groups = [...byGroup.keys()].sort((a, b) => (GROUP_ORDER.indexOf(a) + 1 || 99) - (GROUP_ORDER.indexOf(b) + 1 || 99));
+    const select = el('select', {
+      class: 'select', attrs: { 'aria-label': 'Add a keyword' },
+      onchange: async e => {
+        const v = e.target.value;
         if (!v) return;
         let key = v;
         if (v === '__other__') {
-          key = await ui.prompt('Add keyword', { label: 'Keyword', placeholder: 'e.g. async' });
+          key = await ui.prompt('Add keyword', { label: 'Keyword', placeholder: 'e.g. with_items' });
           if (!key) { renderInspector(); return; }
         }
         const spec = SX.keywordSpec(key);
         state.focus = `kw:${key}`;
-        inspectorEdit(node.id, n => { n.kw[key] = spec.kind === 'list' || spec.kind === 'handlers' ? [] : spec.kind === 'bool' ? true : ''; });
-      }, { cls: 'select', label: 'Add a keyword' })
+        inspectorEdit(node.id, n => {
+          n.kw[key] = spec.kind === 'list' || spec.kind === 'handlers' ? [] : spec.kind === 'bool' ? true : spec.kind === 'choice' ? spec.suggest[0] : '';
+        });
+      }
+    }, [
+      el('option', { value: '', text: '+ Add keyword…' }),
+      ...groups.map(group => el('optgroup', { label: group }, byGroup.get(group).map(key => el('option', { value: key, text: SX.keywordSpec(key).label ? `${key} (${SX.keywordSpec(key).label})` : key, title: SX.keywordSpec(key).doc })))),
+      el('option', { value: '__other__', text: 'Other…' })
+    ]);
+    return select;
+  }
+
+  function keywordsSection(node, setName, exclude = []) {
+    const pinned = PINNED[setName] || [];
+    const rows = [];
+    const shown = new Set([...exclude, ...pinned]);
+    let becomeOn = false;
+    for (const key of pinned) {
+      if (key === 'become') {
+        const become = becomeRow(node);
+        rows.push(...become.rows);
+        becomeOn = become.on;
+        continue;
+      }
+      const present = node.kw[key] !== undefined;
+      if (present || key === 'notify' || key === 'tags' || key === 'listen') {
+        rows.push(...keywordEditor(node, key, { removable: present && !['notify', 'tags', 'listen'].includes(key) }));
+      } else if (!readOnly()) {
+        const label = key === 'when' ? '+ Add condition' : key === 'register' ? '+ Save result as variable' : `+ Add ${key}`;
+        rows.push(el('span', { title: SX.keywordSpec(key).doc }, breakable(key)), el('button', { class: 'dashed-btn', type: 'button', text: label, onclick: () => { state.focus = `kw:${key}`; inspectorEdit(node.id, n => { n.kw[key] = ''; }); } }));
+      }
+    }
+    if (becomeOn || PRIVILEGE.some(k => node.kw[k] !== undefined)) {
+      const keys = becomeOn ? ['become_user', 'become_method'] : [];
+      rows.push(...privilegeRows(node, keys, exclude));
+      PRIVILEGE.filter(k => keys.includes(k) || node.kw[k] !== undefined).forEach(k => shown.add(k));
+    }
+    for (const key of Object.keys(node.kw)) {
+      if (shown.has(key)) continue;
+      shown.add(key);
+      rows.push(...keywordEditor(node, key));
+    }
+    return el('div', { class: 'panel-section' }, [
+      el('h3', { class: 'panel-title', text: { play: 'Play keywords', block: 'Block keywords', role: 'Role keywords', handler: 'Handler keywords' }[setName] || 'Task keywords' }),
+      rows.length ? el('div', { class: 'kw-grid' }, rows) : null,
+      readOnly() ? null : addKeywordMenu(node, setName, shown)
     ]);
   }
 
@@ -918,8 +1036,20 @@
         }));
       }
     }
-    return [head, el('div', { class: 'panel-section' }, [nameField, moduleField]), params, keywordsSection(node, 'task'), issueCallouts(node), yamlSection(node)];
+    return [head, el('div', { class: 'panel-section' }, [nameField, moduleField]), params, keywordsSection(node, isHandler(node.id) ? 'handler' : 'task'), issueCallouts(node), yamlSection(node)];
   }
+
+  // Handlers sit in a play's or role's handlers list, possibly inside blocks.
+  function isHandler(id) {
+    let loc = SX.locate(project(), id);
+    while (loc) {
+      if (loc.section === 'handlers') return true;
+      if (!loc.owner?.type || loc.owner.type === 'play') return false;
+      loc = SX.locate(project(), loc.owner.id);
+    }
+    return false;
+  }
+  SX.isHandler = isHandler;
 
   function otherArg(node, name) {
     const value = node.args[name];
@@ -944,6 +1074,7 @@
   function inspectPlay(node) {
     const groups = groupsFor();
     const hostsInput = input(node.hosts, v => inspectorEdit(node.id, n => { n.hosts = v; }, `${node.id}:hosts`), { list: 'host-groups', focusKey: 'hosts' });
+    const becomeOn = A.typedScalar(node.kw.become) === true;
     const switchRow = (key, label, defaultOn) => {
       const id = ui.fieldId();
       const on = node.kw[key] === undefined ? defaultOn : A.typedScalar(node.kw[key]) === true;
@@ -956,12 +1087,14 @@
         ui.field('Hosts', hostsInput, { hint: 'A group from the inventory, a host, or a pattern.' }),
         el('datalist', { id: 'host-groups' }, groups.map(g => el('option', { value: g }))),
         switchRow('become', 'Run with privilege escalation (become)', false),
+        becomeOn ? el('div', { class: 'kw-grid' }, privilegeRows(node, ['become_user', 'become_method'])) : null,
         switchRow('gather_facts', 'Gather facts', true),
         ui.field('Connection', input(node.kw.connection, v => inspectorEdit(node.id, n => { if (v) n.kw.connection = v; else delete n.kw.connection; }, `${node.id}:connection`), { list: 'connections', placeholder: 'default (ssh)' })),
-        el('datalist', { id: 'connections' }, ['ansible.netcommon.network_cli', 'ansible.netcommon.httpapi', 'ansible.netcommon.netconf', 'ssh', 'local'].map(c => el('option', { value: c })))
+        el('datalist', { id: 'connections' }, (SX.keywordSpec('connection').suggest || ['ssh', 'local']).map(c => el('option', { value: c })))
       ]),
       el('div', { class: 'panel-section' }, [el('h3', { class: 'panel-title', text: 'Play vars' }), varEditor(node)]),
-      keywordsSection(node, 'play', ['become', 'gather_facts', 'connection']),
+      // become_user and become_method sit under the become switch; flags and exe join them once set.
+      keywordsSection(node, 'play', ['become', 'gather_facts', 'connection', ...(becomeOn ? ['become_user', 'become_method', ...['become_flags', 'become_exe'].filter(k => node.kw[k] !== undefined)] : [])]),
       issueCallouts(node),
       yamlSection(node)
     ];

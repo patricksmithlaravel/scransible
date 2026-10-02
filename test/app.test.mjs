@@ -387,3 +387,98 @@ test('the module set builder turns ansible-doc output into a module set', { skip
   writeFileSync(spec, JSON.stringify({ collection: 'ansible.builtin', modules: { debug: { category: 'utilities', palette: ['nope'] } } }));
   assert.notEqual(spawnSync('python3', [join(root, 'tools/build-module-set.py'), spec], { encoding: 'utf8' }).status, 0, 'undocumented palette arguments are rejected');
 });
+
+test('every keyword Ansible documents is offered where it applies', async () => {
+  const { SX } = await openApp();
+  const docs = SX.KEYWORDS;
+  for (const [type, target] of [['task', 'task'], ['handler', 'handler'], ['block', 'block'], ['play', 'play'], ['role', 'role']]) {
+    const offered = new Set(plain(SX.keywordsFor(type)));
+    const expected = Object.entries(docs).filter(([name, spec]) => spec.appliesTo.includes(target) && !spec.structural && !(type === 'play' && name === 'vars')).map(([name]) => name);
+    assert.deepEqual([...offered].sort(), expected.sort(), `${type} keywords`);
+  }
+  for (const name of ['become', 'become_user', 'become_method', 'become_flags', 'become_exe', 'async', 'poll', 'connection', 'remote_user', 'delegate_facts', 'debugger', 'module_defaults']) {
+    assert.ok(SX.keywordsFor('task').includes(name), `tasks offer ${name}`);
+  }
+  assert.ok(SX.keywordsFor('handler').includes('listen') && !SX.keywordsFor('task').includes('listen'));
+  assert.ok(SX.keywordSpec('become_method').suggest.includes('enable'), 'become_method suggests enable for network devices');
+  assert.equal(SX.keywordSpec('debugger').kind, 'choice');
+  assert.ok(SX.TASK_KEYWORD_NAMES.has('local_action') && SX.TASK_KEYWORD_NAMES.has('become_flags'));
+});
+
+test('the inspector shows inherited become and the privilege escalation rows', async () => {
+  const { SX, doc, window } = await openApp();
+  const project = SX.exampleProject();
+  const play = SX.activePlaybook(project).items[0];
+  play.kw.become_method = 'enable';
+  SX.store.replace(project);
+  const block = play.tasks.find(t => t.type === 'block');
+  const nested = block.block[0];
+  window.Scransible.revealNode(nested.id);
+  await tick();
+  const become = doc.querySelector('.inspector select[aria-label="become"]');
+  assert.equal(become.selectedOptions[0].textContent, 'Inherit from play (yes)');
+  const method = doc.querySelector('.inspector [data-focus="kw:become_method"]');
+  assert.ok(method, 'become_method row shows because become is inherited as yes');
+  assert.match(method.placeholder, /inherits enable from play/);
+  method.value = 'sudo';
+  method.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.equal(SX.findNode(SX.store.project, nested.id).kw.become_method, 'sudo');
+  become.value = 'false';
+  become.dispatchEvent(new window.Event('change', { bubbles: true }));
+  await tick();
+  assert.equal(SX.findNode(SX.store.project, nested.id).kw.become, false);
+  const menu = doc.querySelector('.inspector select[aria-label="Add a keyword"]');
+  const groups = [...menu.querySelectorAll('optgroup')].map(g => g.label);
+  assert.ok(groups.includes('Privilege escalation') && groups.includes('Where and how it runs'));
+  assert.ok([...menu.options].some(o => o.value === 'async'), 'async can be added');
+});
+
+test('keywords that Ansible would reject are flagged', async () => {
+  const { SX } = await openApp();
+  const play = SX.newPlay({ name: 'P', hosts: 'all', kw: { gater_facts: true } });
+  play.tasks.push(SX.newTask('ansible.builtin.debug', { name: 'T', kw: { becom: true, gather_facts: true, listen: ['x'], become_method: 'enable' } }));
+  play.handlers.push(SX.newTask('ansible.builtin.debug', { name: 'H', kw: { listen: ['x'] } }));
+  const project = SX.newProject('kw');
+  SX.activePlaybook(project).items.push(play);
+  SX.normalizeProject(project);
+  const flagged = plain(SX.Lint.run(project).issues.filter(i => i.rule === 'unknown-keyword').map(i => i.message.match(/"([^"]+)"/)[1])).sort();
+  assert.deepEqual(flagged, ['becom', 'gater_facts', 'gather_facts', 'listen']);
+});
+
+test('the Cisco IOS play preset uses enable mode', async () => {
+  const { SX } = await openApp();
+  SX.store.replace(SX.newProject());
+  SX.DnD.handler.drop({ kind: 'new', type: 'play', preset: 'cisco.ios.ios', label: 'Cisco IOS' }, { kind: 'canvas', x: 20, y: 20 });
+  const [play] = SX.activePlaybook(SX.store.project).items;
+  assert.deepEqual(plain(play.kw), { connection: 'ansible.netcommon.network_cli', gather_facts: false, become: true, become_method: 'enable' });
+});
+
+test('Ansible accepts every keyword the builder offers, on every kind of item', { skip: !hasAnsible && 'ansible-playbook not found' }, async () => {
+  const { SX } = await openApp();
+  const special = {
+    loop_control: { label: 'x' }, vars_prompt: [], vars_files: [], environment: {}, module_defaults: {}, vars: {}, become_method: 'sudo',
+    connection: 'local', strategy: 'linear', serial: '1', delegate_to: 'localhost', remote_user: 'root', become_user: 'root', become_exe: 'sudo',
+    become_flags: '-H', fact_path: '/tmp', collections: ['ansible.builtin'], notify: ['done'], listen: ['topic'], gather_subset: ['all'], loop: '{{ [1] }}'
+  };
+  const sample = name => {
+    if (name in special) return special[name];
+    const spec = SX.keywordSpec(name);
+    return { bool: true, int: '2', list: ['x'], cond: 'true', expr: '{{ [1] }}', name: 'out', choice: spec.suggest?.[0], yaml: {}, handlers: ['done'] }[spec.kind] ?? (spec.suggest ? spec.suggest[0] : 'x');
+  };
+  const every = type => Object.fromEntries(SX.keywordsFor(type).map(name => [name, sample(name)]));
+  const t = (name, kw) => SX.newTask('ansible.builtin.debug', { name, args: { msg: 'hi' }, kw });
+  const play = SX.newPlay({
+    name: 'Every keyword', hosts: 'localhost', kw: every('play'),
+    roles: [Object.assign(SX.newRoleRef('demo'), { kw: every('role') })],
+    tasks: [t('Task with every keyword', every('task')), SX.newBlock({ name: 'Block with every keyword', kw: every('block'), block: [t('Inner', {})] })],
+    handlers: [t('done', every('handler'))]
+  });
+  const yaml = SX.Ansible.playbookYaml({ items: [play] }, {});
+  assert.equal(yaml.problem, null);
+  const dir = mkdtempSync(join(tmpdir(), 'scransible-kw-'));
+  spawnSync('mkdir', ['-p', join(dir, 'roles/demo/tasks')]);
+  writeFileSync(join(dir, 'roles/demo/tasks/main.yml'), '- ansible.builtin.debug:\n    msg: role\n');
+  writeFileSync(join(dir, 'site.yml'), yaml.text);
+  const result = spawnSync('ansible-playbook', ['--syntax-check', '-i', 'localhost,', join(dir, 'site.yml')], { encoding: 'utf8', env: { ...process.env, ANSIBLE_NOCOLOR: '1' } });
+  assert.equal(result.status, 0, `${result.stdout}${result.stderr}\n${yaml.text}`);
+});

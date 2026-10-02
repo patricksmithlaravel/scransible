@@ -325,64 +325,39 @@
 
   // ---- Keywords -------------------------------------------------------------------
 
-  // Kinds: cond (a Jinja test without braces), expr (a value that is usually a Jinja
-  // expression), list, handlers (notify targets), name, bool, int, str and yaml.
-  SX.KEYWORDS = {
-    when: { kind: 'cond' },
-    loop: { kind: 'expr', label: 'loop over' },
-    notify: { kind: 'handlers' },
-    register: { kind: 'name' },
-    tags: { kind: 'list' },
-    changed_when: { kind: 'cond', label: 'changed when' },
-    failed_when: { kind: 'cond', label: 'failed when' },
-    become: { kind: 'bool' },
-    become_user: { kind: 'str' },
-    ignore_errors: { kind: 'bool' },
-    delegate_to: { kind: 'str' },
-    run_once: { kind: 'bool' },
-    no_log: { kind: 'bool' },
-    until: { kind: 'cond' },
-    retries: { kind: 'int' },
-    delay: { kind: 'int' },
-    check_mode: { kind: 'bool' },
-    listen: { kind: 'str' },
-    loop_control: { kind: 'yaml' },
-    environment: { kind: 'yaml' },
-    vars: { kind: 'yaml' },
-    connection: { kind: 'str' },
-    gather_facts: { kind: 'bool', label: 'gather facts' },
-    serial: { kind: 'str' },
-    strategy: { kind: 'str' },
-    any_errors_fatal: { kind: 'bool' },
-    max_fail_percentage: { kind: 'int' },
-    remote_user: { kind: 'str' },
-    timeout: { kind: 'int' },
-    throttle: { kind: 'int' },
-    diff: { kind: 'bool' },
-    order: { kind: 'str' },
-    force_handlers: { kind: 'bool' },
-    vars_files: { kind: 'list' },
-    collections: { kind: 'list' },
-    module_defaults: { kind: 'yaml' }
+  // Filled by src/keywords.js, generated from `ansible-doc -t keyword`: every playbook
+  // keyword with the objects it applies to, its slot kind (cond, expr, list, handlers,
+  // name, bool, int, str, choice, yaml), a description, a menu group and suggestions.
+  SX.KEYWORDS = {};
+  SX.keywordsVersion = null;
+
+  // Before the catalog loads, imports still need to tell keywords from module names.
+  SX.TASK_KEYWORD_NAMES = new Set(['action', 'args', 'become', 'become_user', 'changed_when', 'delegate_to', 'failed_when', 'ignore_errors',
+    'local_action', 'loop', 'loop_control', 'name', 'notify', 'register', 'tags', 'until', 'vars', 'when', 'block', 'rescue', 'always']);
+
+  SX.registerKeywords = function registerKeywords(catalog) {
+    SX.KEYWORDS = catalog.keywords;
+    SX.keywordsVersion = catalog.ansible;
+    SX.TASK_KEYWORD_NAMES = new Set([...Object.keys(catalog.keywords).filter(k => catalog.keywords[k].appliesTo.includes('task')), 'block', 'rescue', 'always']);
   };
 
-  SX.keywordSpec = name => SX.KEYWORDS[name] || { kind: 'str' };
+  // with_items and friends are the legacy loop form of `loop`.
+  SX.keywordSpec = name => SX.KEYWORDS[name]
+    || (name.startsWith('with_') ? { kind: 'expr', appliesTo: ['task', 'handler'], group: 'Conditions & loops' } : { kind: 'str', unknown: true });
 
-  // What each kind of item can carry, in the order the inspector offers them.
-  SX.KEYWORD_SETS = {
-    task: ['when', 'loop', 'notify', 'register', 'tags', 'changed_when', 'failed_when', 'become', 'become_user', 'ignore_errors',
-      'delegate_to', 'run_once', 'no_log', 'until', 'retries', 'delay', 'check_mode', 'listen', 'loop_control', 'environment', 'vars', 'timeout', 'throttle'],
-    block: ['when', 'tags', 'become', 'become_user', 'ignore_errors', 'delegate_to', 'run_once', 'no_log', 'environment', 'vars', 'notify'],
-    play: ['become', 'become_user', 'gather_facts', 'connection', 'serial', 'strategy', 'any_errors_fatal', 'max_fail_percentage',
-      'ignore_errors', 'remote_user', 'order', 'force_handlers', 'vars_files', 'collections', 'module_defaults', 'environment', 'tags', 'timeout'],
-    role: ['when', 'tags', 'become', 'delegate_to']
+  // Keywords an item of this type can carry, apart from the ones that are its structure
+  // (tasks, block, name, ...). A play's vars are var blocks, so they aren't offered here.
+  SX.keywordsFor = function keywordsFor(type) {
+    const target = type === 'role' ? 'role' : type;
+    return Object.entries(SX.KEYWORDS)
+      .filter(([name, spec]) => spec.appliesTo.includes(target) && !spec.structural && !(type === 'play' && name === 'vars'))
+      .map(([name]) => name);
   };
 
-  // Every keyword Ansible accepts on a task, so an imported task's module is whatever key is left.
-  SX.TASK_KEYWORD_NAMES = new Set(['action', 'any_errors_fatal', 'args', 'async', 'become', 'become_exe', 'become_flags',
-    'become_method', 'become_user', 'changed_when', 'check_mode', 'collections', 'connection', 'debugger', 'delay',
-    'delegate_facts', 'delegate_to', 'diff', 'environment', 'failed_when', 'ignore_errors', 'ignore_unreachable',
-    'local_action', 'loop', 'loop_control', 'module_defaults', 'name', 'no_log', 'notify', 'poll', 'port', 'register',
-    'remote_user', 'retries', 'run_once', 'tags', 'throttle', 'timeout', 'until', 'vars', 'when', 'listen',
-    'block', 'rescue', 'always']);
+  // Whether a keyword is valid on this kind of item (unknown and with_* keywords count as valid on tasks).
+  SX.keywordAppliesTo = function keywordAppliesTo(name, type) {
+    const spec = SX.KEYWORDS[name];
+    if (!spec) return name.startsWith('with_') ? type === 'task' : !Object.keys(SX.KEYWORDS).length;
+    return spec.appliesTo.includes(type === 'role' ? 'role' : type);
+  };
 })();

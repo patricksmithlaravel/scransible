@@ -8,7 +8,20 @@
 
   const label = node => `"${node.name || node.module?.split('.').pop() || 'Unnamed task'}"`;
 
+  // Ansible rejects keywords that don't exist or don't belong on this kind of item.
+  function keywordIssues(node, type, push) {
+    for (const key of Object.keys(node.kw || {})) {
+      if (SX.keywordAppliesTo(key, type)) continue;
+      const known = SX.KEYWORDS[key];
+      const where = { task: 'tasks', handler: 'handlers', block: 'blocks', play: 'plays', role: 'role blocks' }[type];
+      push(node, 'unknown-keyword', 'warning', known
+        ? `"${key}" doesn't apply to ${where} (it works on ${known.appliesTo.join(', ')}), so Ansible will reject it here.`
+        : `"${key}" isn't an Ansible keyword, so Ansible will reject it. Is it a typo, or an argument that belongs to the module?`);
+    }
+  }
+
   function taskIssues(node, env, push) {
+    keywordIssues(node, env.inHandlers?.has(node.id) ? 'handler' : 'task', push);
     if (!node.module) {
       push(node, 'no-module', 'error', `${label(node)} has no module.`);
       return;
@@ -56,6 +69,7 @@
     SX.walk(list, node => {
       if (node.type === 'task') taskIssues(node, env, push);
       if (node.type === 'block') {
+        keywordIssues(node, 'block', push);
         if (!node.block.length && !node.rescue.length && !node.always.length) push(node, 'empty-block', 'warning', `Block "${node.name || 'unnamed'}" is empty.`);
         checkVariables(node, Object.entries(node.kw).filter(([k]) => k !== 'when').map(([, v]) => v), node.kw.when ? [node.kw.when] : [], env, push);
       }
@@ -82,16 +96,20 @@
         for (const item of pb.items) {
           if (item.type !== 'play') continue;
           if (!String(item.hosts ?? '').trim()) push(item, 'no-hosts', 'error', `Play "${item.name || 'unnamed'}" has no hosts.`);
+          keywordIssues(item, 'play', push);
           if (!item.tasks.length && !item.roles.length && !item.pre_tasks.length && !item.post_tasks.length) {
             push(item, 'empty-play', 'warning', `Play "${item.name || 'unnamed'}" has no tasks or roles.`);
           }
           for (const ref of item.roles) {
+            keywordIssues(ref, 'role', push);
             if (!ref.role) push(ref, 'role-missing', 'error', 'A role block has no role name.');
             else if (!project.roles.some(r => r.name === ref.role)) {
               push(ref, 'unknown-role', 'warning', `Role "${ref.role}" isn't in this project, so it has to come from Galaxy or roles_path.`);
             }
           }
-          const env = { scope: A.variablesInScope(project, item), handlers: SX.handlerNames(item), handlerScope: 'in this play' };
+          const inHandlers = new Set();
+          SX.walk(item.handlers, n => inHandlers.add(n.id));
+          const env = { scope: A.variablesInScope(project, item), handlers: SX.handlerNames(item), handlerScope: 'in this play', inHandlers };
           checkVariables(item, [item.vars.map(v => v.value), item.roles.map(r => r.vars)], [], env, push);
           walkTasks(SX.SECTIONS.play.filter(s => s !== 'vars' && s !== 'roles').flatMap(s => item[s]), env, push);
         }
@@ -105,7 +123,9 @@
           if (node.type === 'task' && /\.set_fact$/.test(node.module)) Object.keys(node.args).forEach(k => scope.set(k, 'set_fact'));
         });
         const handlers = SX.handlerNames({ handlers: role.handlers });
-        walkTasks([...role.tasks, ...role.handlers], { scope, handlers, handlerScope: `in role ${role.name}` }, push);
+        const inHandlers = new Set();
+        SX.walk(role.handlers, n => inHandlers.add(n.id));
+        walkTasks([...role.tasks, ...role.handlers], { scope, handlers, handlerScope: `in role ${role.name}`, inHandlers }, push);
       }
       const counts = { errors: issues.filter(i => i.severity === 'error').length, warnings: issues.filter(i => i.severity === 'warning').length };
       return { issues, byNode, counts };

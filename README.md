@@ -54,6 +54,25 @@ strings and are quoted where needed. Module arguments documented as strings are 
 converted, so `cmd: true` runs the `true` command. After generating YAML the app parses
 it back and warns if it doesn't match.
 
+## Keywords
+
+Every playbook keyword Ansible documents is available, on the items it applies to
+(play, role, block, task, handler) — 62 in all, from `when` and `loop` to
+`become_method`, `async`, `delegate_facts` and `module_defaults`. The inspector always
+shows a task's notify, tags, when, become and register; `become` says what it inherits
+("Inherit from play (yes)"), and while privilege escalation is on, `become_user` and
+`become_method` (with the installed become plugins, such as `enable` for network
+devices, as suggestions) are shown too. Everything else is in the grouped
+*+ Add keyword…* menu. Keywords Ansible would reject — a typo, or `gather_facts` on a
+task — are flagged.
+
+The catalog in `src/keywords.js` is generated from `ansible-doc -t keyword`; the
+builder-specific parts (slot kinds, groups, suggestions) are in `tools/keywords.json`:
+
+```bash
+python3 tools/build-keywords.py > src/keywords.js
+```
+
 ## Module sets
 
 Every block in the palette comes from a **module set**: one file per collection in
@@ -121,8 +140,10 @@ npm test
 
 The tests load `index.html` in jsdom with all its scripts and module sets, using the same
 js-yaml version the page loads. If `python3` with PyYAML and `ansible-playbook` are on
-your PATH they also check that PyYAML reads the output identically and that Ansible runs
-a generated playbook; with `ansible-doc` they also exercise the module set builder.
+your PATH they also check that PyYAML reads the output identically, that Ansible runs
+a generated playbook, and that `ansible-playbook --syntax-check` accepts every keyword the
+builder offers on every kind of item; with `ansible-doc` they also exercise the module set
+builder.
 Otherwise those tests are skipped. CI installs all three.
 
 The code is plain scripts sharing one `Scransible` namespace (`src/`), so it runs straight
