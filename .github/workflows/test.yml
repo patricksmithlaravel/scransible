@@ -4,20 +4,28 @@ on:
   push:
   pull_request:
 
+# The job only reads the code and runs the tests.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      # Actions are pinned to commits, because tags can be moved to other code.
+      # Dependabot (.github/dependabot.yml) proposes updates to these pins.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
-      # PyYAML and ansible-playbook let the YAML 1.1 and real-Ansible tests run
-      # instead of being skipped.
-      - run: pip install ansible-core
+      # A pinned ansible-core gives PyYAML, ansible-playbook and ansible-doc, so the
+      # YAML 1.1, real-Ansible and module-set tests run instead of being skipped.
+      - run: pip install -r requirements-ci.txt
       - run: npm ci
       - run: npm test
