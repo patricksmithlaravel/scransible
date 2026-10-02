@@ -1,0 +1,173 @@
+{
+  "comment": "Curation for tools/build-keywords.py. Names, applicable objects, types and descriptions come from `ansible-doc -t keyword`; this file only adds what the builder needs on top.",
+  "structural": [
+    "name",
+    "hosts",
+    "tasks",
+    "pre_tasks",
+    "post_tasks",
+    "handlers",
+    "roles",
+    "block",
+    "rescue",
+    "always",
+    "action",
+    "local_action",
+    "args",
+    "with_<lookup_plugin>"
+  ],
+  "kinds": {
+    "when": "cond",
+    "changed_when": "cond",
+    "failed_when": "cond",
+    "until": "cond",
+    "loop": "expr",
+    "notify": "handlers",
+    "register": "name",
+    "tags": "list",
+    "collections": "list",
+    "vars_files": "list",
+    "gather_subset": "list",
+    "environment": "yaml",
+    "module_defaults": "yaml",
+    "vars": "yaml",
+    "loop_control": "yaml",
+    "vars_prompt": "yaml",
+    "serial": "str",
+    "listen": "list"
+  },
+  "labels": {
+    "loop": "loop over",
+    "changed_when": "changed when",
+    "failed_when": "failed when",
+    "gather_facts": "gather facts"
+  },
+  "groups": {
+    "Conditions & loops": [
+      "when",
+      "changed_when",
+      "failed_when",
+      "until",
+      "retries",
+      "delay",
+      "loop",
+      "loop_control",
+      "ignore_errors",
+      "ignore_unreachable",
+      "any_errors_fatal",
+      "max_fail_percentage"
+    ],
+    "Privilege escalation": [
+      "become",
+      "become_user",
+      "become_method",
+      "become_flags",
+      "become_exe"
+    ],
+    "Where and how it runs": [
+      "delegate_to",
+      "delegate_facts",
+      "run_once",
+      "connection",
+      "remote_user",
+      "port",
+      "throttle",
+      "timeout",
+      "async",
+      "poll",
+      "serial",
+      "strategy",
+      "order"
+    ],
+    "Results and handlers": [
+      "register",
+      "notify",
+      "listen",
+      "force_handlers",
+      "no_log",
+      "diff",
+      "check_mode",
+      "debugger",
+      "tags"
+    ],
+    "Facts": [
+      "gather_facts",
+      "gather_subset",
+      "gather_timeout",
+      "fact_path"
+    ],
+    "Variables and defaults": [
+      "vars",
+      "vars_files",
+      "vars_prompt",
+      "environment",
+      "module_defaults",
+      "collections"
+    ]
+  },
+  "suggest": {
+    "become_method": {
+      "plugins": "become",
+      "first": [
+        "sudo",
+        "su",
+        "enable",
+        "runas"
+      ]
+    },
+    "connection": {
+      "plugins": "connection",
+      "first": [
+        "ssh",
+        "local",
+        "ansible.netcommon.network_cli",
+        "ansible.netcommon.httpapi",
+        "ansible.netcommon.netconf"
+      ]
+    },
+    "strategy": {
+      "plugins": "strategy",
+      "first": [
+        "linear",
+        "free",
+        "host_pinned",
+        "debug"
+      ]
+    },
+    "debugger": {
+      "values": [
+        "always",
+        "never",
+        "on_failed",
+        "on_unreachable",
+        "on_skipped"
+      ]
+    },
+    "order": {
+      "values": [
+        "inventory",
+        "reverse_inventory",
+        "sorted",
+        "reverse_sorted",
+        "shuffle"
+      ]
+    }
+  },
+  "extra": {
+    "listen": {
+      "applies_to": [
+        "Handler"
+      ],
+      "type": "list",
+      "description": "Topics a handler listens to, so a task can notify every handler that listens to one topic instead of naming each handler."
+    },
+    "local_action": {
+      "applies_to": [
+        "Task",
+        "Handler"
+      ],
+      "type": "string",
+      "description": "Same as action, but also implies delegate_to: localhost."
+    }
+  }
+}
