@@ -142,7 +142,7 @@
     SX.walk(play?.handlers || [], node => {
       if (node.type !== 'task') return;
       if (node.name) names.push(node.name);
-      if (node.kw.listen) names.push(String(node.kw.listen));
+      [].concat(node.kw.listen || []).forEach(topic => topic && names.push(String(topic)));
     });
     return [...new Set(names)];
   };
