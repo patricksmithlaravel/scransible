@@ -1,0 +1,3 @@
+# Python packages CI installs. Pinned so a new Ansible release can't change test
+# results without a reviewed bump (Dependabot proposes them).
+ansible-core==2.21.4
