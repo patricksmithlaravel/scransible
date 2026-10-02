@@ -7,7 +7,7 @@
     "test": "node --test"
   },
   "devDependencies": {
-    "js-yaml": "4.1.1",
+    "js-yaml": "5.4.2",
     "jsdom": "^30.1.1"
   }
 }
