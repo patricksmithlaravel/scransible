@@ -1,0 +1,13 @@
+{
+  "name": "scransible",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Drag-and-drop Ansible playbook builder in a single HTML file",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "js-yaml": "4.1.1",
+    "jsdom": "^30.1.1"
+  }
+}
