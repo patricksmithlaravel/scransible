@@ -1,0 +1,8 @@
+{
+  "collection": "community.general",
+  "title": "Community general",
+  "modules": {
+    "ufw": { "category": "access", "palette": ["rule", "to_port", "proto"], "defaults": { "rule": "allow", "proto": "tcp" } },
+    "timezone": { "category": "utilities", "palette": ["name"] }
+  }
+}

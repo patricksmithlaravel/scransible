@@ -2,7 +2,7 @@
   "name": "scransible",
   "version": "0.0.0",
   "private": true,
-  "description": "Drag-and-drop Ansible playbook builder in a single HTML file",
+  "description": "A Scratch-style block builder for Ansible playbooks, roles and inventories",
   "scripts": {
     "test": "node --test"
   },
