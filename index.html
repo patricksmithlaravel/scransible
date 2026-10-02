@@ -1,93 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Scransible</title>
+<link rel="icon" href="data:,">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-:root{--play-bg:#4a90e2;--task-bg:#5cb85c;--block-bg:#f0ad4e;--dark-bg:#2d2d2d;--darker-bg:#1e1e1e;--light-text:#e0e0e0;--dark-text:#333;}
-#root{display:flex;height:900px;border:1px solid #444;border-radius:8px;overflow:hidden;font-family: -apple-system, system-ui, sans-serif;background:var(--dark-bg);color:var(--light-text);}
-.pl{width:260px;background:var(--darker-bg);border-right:1px solid #555;display:flex;flex-direction:column;}
-.pc{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px;transition:background .2s ease;background:var(--dark-bg);}
+:root{--play-bg:#4a90e2;--task-bg:#5cb85c;--block-bg:#f0ad4e;--dark-bg:#2d2d2d;--darker-bg:#1e1e1e;--light-text:#e0e0e0;--dark-text:#333;--focus:#8ab4f8;}
+html,body{height:100%;}
+body{background:var(--darker-bg);color:var(--light-text);font-family:-apple-system, system-ui, sans-serif;}
+:focus-visible{outline:2px solid var(--focus);outline-offset:1px;}
+#root{display:flex;height:100vh;height:100dvh;overflow:hidden;background:var(--dark-bg);}
+.pl{width:240px;flex-shrink:0;background:var(--darker-bg);border-right:1px solid #555;display:flex;flex-direction:column;overflow-y:auto;}
+.pc{flex:1;min-width:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px;transition:background .2s ease;background:var(--dark-bg);}
 .pc.on{background:rgba(74,144,226,0.1);}
-.pr{width:400px;background:#0f0f0f;border-left:1px solid #333;display:flex;flex-direction:column;color:#d4d4d4;}
+.pr{width:clamp(300px, 34vw, 480px);flex-shrink:0;min-height:0;background:#0f0f0f;border-left:1px solid #333;display:flex;flex-direction:column;color:#d4d4d4;}
 .ph{padding:12px;font-size:11px;font-weight:bold;text-transform:uppercase;background:#333;border-bottom:1px solid #555;color:#ccc;}
+.hint{padding:10px 12px 0;font-size:11px;line-height:1.4;color:#999;}
 .plist{padding:10px;display:flex;flex-direction:column;gap:8px;}
-.bitem{padding:10px;background:#444;border:1px solid #666;border-radius:8px;cursor:grab;font-size:13px;font-weight:500;color:#fff;transition:background 0.2s;}
+.bitem{padding:10px;background:#444;border:1px solid #666;border-radius:8px;cursor:grab;font-size:13px;font-weight:500;color:#fff;transition:background 0.2s;user-select:none;}
 .bitem:hover{background:#555;}
+details > div{display:flex;flex-direction:column;gap:6px;margin:4px 0 0 5px;}
+details summary{margin-top:10px;padding:5px 0;font-size:10px;color:#999;cursor:pointer;list-style:none;text-transform:uppercase;letter-spacing:.04em;}
+details summary::-webkit-details-marker{display:none;}
+details summary::before{content:'▸ ';}
+details[open] summary::before{content:'▾ ';}
+.empty-canvas{color:#999;text-align:center;padding-top:100px;line-height:1.5;}
 .cblock{border-radius:12px;box-shadow:0 4px 8px rgba(0,0,0,0.3);margin-bottom:15px;overflow:hidden;border:2px solid transparent;}
 .cblock.play{background:linear-gradient(135deg, var(--play-bg), #357abd);border-color:#357abd;}
 .cblock.task{background:linear-gradient(135deg, var(--task-bg), #4cae4c);border-color:#4cae4c;}
 .cblock.block{background:linear-gradient(135deg, var(--block-bg), #d58512);border-color:#d58512;}
-.bhead{padding:12px 15px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;color:#fff;font-weight:600;}
+.cblock.dragging{opacity:.5;}
+.bhead{padding:8px 10px 8px 12px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:8px;color:#fff;font-weight:600;cursor:grab;}
+.cblock.collapsed > .bhead{border-bottom:none;}
+.btitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;}
+.bmod{margin-left:6px;font-size:12px;font-weight:400;opacity:.85;}
+.bactions{display:flex;gap:4px;flex-shrink:0;}
+.btn-icon{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.25);border-radius:4px;color:#fff;font-size:12px;cursor:pointer;}
+.btn-icon:hover{background:rgba(0,0,0,.4);}
+.btn-icon:disabled{opacity:.35;cursor:default;}
+.btn-icon.danger{color:#ffc4c4;}
+.btn-toggle{width:16px;background:none;border:none;color:#fff;font-size:14px;cursor:pointer;padding:0;}
 .bbody{padding:15px;background:rgba(255,255,255,0.05);}
-.f-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.f-label{width:90px;font-size:11px;font-weight:bold;color:#ccc;text-align:right;}
-.f-input{flex:1;padding:6px;border:1px solid #666;border-radius:4px;font-size:12px;background:#333;color:#fff;}
-.f-input:focus{border-color:#888;outline:none;}
-.dz{border:2px dashed #666;border-radius:8px;padding:10px;min-height:50px;margin-top:10px;background:rgba(255,255,255,0.05);color:#ccc;text-align:center;}
-.dz.on{background:rgba(74,144,226,0.1);border-color:var(--play-bg);}
-.nested-wrap{border-left:4px solid #555;margin-left:15px;padding-left:15px;position:relative;}
-.nested-wrap::before{content:'';position:absolute;left:-4px;top:0;bottom:0;width:4px;background:linear-gradient(to bottom, transparent, #555, transparent);}
-.yout{flex:1;padding:20px;font-family:'Consolas','Monaco',monospace;font-size:12px;white-space:pre;overflow:auto;}
-.btn-ui{padding:4px 8px;font-size:11px;cursor:pointer;background:#555;border:1px solid #777;border-radius:4px;color:#fff;}
+.f-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.f-label{width:100px;flex-shrink:0;padding-top:7px;font-size:11px;font-weight:bold;color:#eee;text-align:right;overflow-wrap:anywhere;}
+.f-input{flex:1;min-width:0;padding:6px;border:1px solid #666;border-radius:4px;font-size:12px;font-family:inherit;background:#333;color:#fff;}
+textarea.f-input{resize:vertical;min-height:30px;font-family:'Consolas','Monaco',monospace;}
+.f-input:focus{border-color:#aaa;outline:none;}
+.f-input.invalid{border-color:#ff6b6b;}
+.sub-head{padding:10px 0 5px;font-size:11px;font-weight:bold;text-transform:uppercase;color:rgba(255,255,255,.8);}
+.sub-head.rescue{color:#7d0000;}
+.sub-head.always{color:#5c3300;}
+.add-row{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px;}
+.btn-ui{max-width:100%;padding:4px 8px;font-size:11px;font-family:inherit;cursor:pointer;background:#555;border:1px solid #777;border-radius:4px;color:#fff;}
 .btn-ui:hover{background:#666;}
 .btn-small{padding:4px 8px;font-size:11px;cursor:pointer;background:#444;color:#fff;border:1px solid #666;border-radius:4px;}
 .btn-small:hover{background:#555;}
-.btn-del{color:#ff6b6b;border-color:rgba(255,107,107,0.3);background:none;font-weight:bold;cursor:pointer;}
-.btn-toggle{background:none;border:none;color:#fff;font-size:14px;cursor:pointer;padding:0;margin-right:10px;}
+.btn-small:disabled{opacity:.4;cursor:default;}
+.btn-del{width:24px;height:28px;flex-shrink:0;color:#ff6b6b;border:1px solid rgba(255,107,107,0.3);border-radius:4px;background:none;font-weight:bold;cursor:pointer;}
+.dz{border:2px dashed #666;border-radius:8px;padding:10px;min-height:50px;margin-top:6px;background:rgba(255,255,255,0.05);color:#ccc;}
+.dz:empty::before{content:attr(data-hint);display:block;padding:6px 0;text-align:center;font-size:12px;color:rgba(255,255,255,.65);}
+.dz.on{background:rgba(74,144,226,0.15);border-color:var(--play-bg);}
+.dz.target{border-style:solid;border-color:var(--focus);}
+.nested-wrap{border-left:4px solid #555;margin-left:15px;padding-left:15px;position:relative;}
+.nested-wrap::before{content:'';position:absolute;left:-4px;top:0;bottom:0;width:4px;background:linear-gradient(to bottom, transparent, #555, transparent);}
+.yout{flex:1;min-height:0;padding:20px;font-family:'Consolas','Monaco',monospace;font-size:12px;white-space:pre;overflow:auto;}
 .status-box{padding:12px;min-height:60px;background:#0f0f0f;border-bottom:1px solid #333;color:#fff;}
 .status-box p{margin-bottom:8px;font-size:12px;}
 .status-box ul{margin-top:8px;padding-left:18px;font-size:12px;color:#f0a500;}
-.controls{display:flex;gap:6px;flex-wrap:wrap;}
-.controls button{margin-top:6px;}
-details summary{margin-top:10px; font-size:10px; color:#ccc; cursor:pointer; list-style:none; padding:5px 0;}
-details div{margin-left:5px;}
+.controls{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+@media (max-width: 1100px){
+  #root{display:grid;grid-template-columns:190px minmax(0, 1fr);grid-template-rows:minmax(0, 1fr) 40vh;}
+  .pl{grid-row:1 / span 2;width:auto;}
+  .pr{width:auto;border-left:none;border-top:1px solid #333;}
+}
+@media (max-width: 680px){
+  #root{display:flex;flex-direction:column;height:auto;min-height:100dvh;overflow:visible;}
+  .pl{width:auto;overflow:visible;border-right:none;border-bottom:1px solid #555;}
+  .plist{flex-direction:row;flex-wrap:wrap;gap:6px;}
+  .plist details{flex-basis:100%;}
+  details > div{flex-direction:row;flex-wrap:wrap;margin-left:0;}
+  .bitem{padding:7px 10px;font-size:12px;}
+  .pc{padding:16px;overflow:visible;}
+  .pr{width:auto;border-left:none;border-top:1px solid #333;}
+  .yout{max-height:70vh;padding:16px;}
+  .f-row{flex-wrap:wrap;gap:4px;}
+  .f-label{width:100%;padding-top:0;text-align:left;}
+  .bbody{padding:12px;}
+  .nested-wrap{margin-left:4px;padding-left:10px;}
+  .empty-canvas{padding:40px 0;}
+}
 </style>
-
+</head>
+<body>
 <div id="root">
   <div class="pl">
     <div class="ph">Library</div>
-    <div class="plist">
-      <div class="bitem" draggable="true" data-type="play">Play (Host Group)</div>
-      <details open>
-        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">ANSIBLE BUILTINS</summary>
-        <div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.shell">Shell Script</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.command">Command</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.copy">Copy</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.file">File</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.service">Service</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.template">Template</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.debug">Debug</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.assert">Assert</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="ansible.builtin.fail">Fail</div>
-        </div>
-      </details>
-      <details>
-        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">CISCO IOS</summary>
-        <div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_config">IOS Config</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_command">IOS Command</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_facts">IOS Facts</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.ios.ios_interfaces">IOS Interfaces</div>
-        </div>
-      </details>
-      <details>
-        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">CISCO NXOS</summary>
-        <div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_config">NXOS Config</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_command">NXOS Command</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_facts">NXOS Facts</div>
-          <div class="bitem" draggable="true" data-type="task" data-mod="cisco.nxos.nxos_interfaces">NXOS Interfaces</div>
-        </div>
-      </details>
-      <details>
-        <summary style="margin-top:10px; font-size:10px; color:#999; cursor:pointer; list-style:none;">LOGIC</summary>
-        <div>
-          <div class="bitem" draggable="true" data-type="block">Logic Block (Try/Catch)</div>
-        </div>
-      </details>
-    </div>
+    <p class="hint">Drag onto the canvas, or click to add to the highlighted area.</p>
+    <div class="plist" id="library"></div>
   </div>
 
-  <div class="pc" id="canvas" ondragenter="onDragOverZone(event, 'root', 'children')" ondragover="onDragOverZone(event, 'root', 'children')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, 'root')">
-    </div>
+  <main class="pc" id="canvas" aria-label="Playbook canvas"></main>
 
   <div class="pr">
     <div class="ph" style="background:#252526; border-bottom:1px solid #333; color:#aaa;">
@@ -96,525 +111,1223 @@ details div{margin-left:5px;}
     <div class="status-box">
       <div class="controls">
         <button class="btn-small" onclick="downloadYaml()">Download YAML</button>
-        <button class="btn-small" onclick="saveState()">Save State</button>
-        <button class="btn-small" onclick="loadState()">Load State</button>
-        <button class="btn-small" onclick="clearState()">Clear State</button>
+        <button class="btn-small" onclick="copyYaml()">Copy YAML</button>
+        <button class="btn-small" id="undo-btn" onclick="undo()" title="Undo (Ctrl/Cmd+Z)">Undo</button>
+        <button class="btn-small" id="redo-btn" onclick="redo()" title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+        <button class="btn-small" onclick="saveState()" title="Keep a copy to come back to. Your work is also saved automatically.">Save Snapshot</button>
+        <button class="btn-small" onclick="loadState()">Load Snapshot</button>
         <button class="btn-small" onclick="exportState()">Export JSON</button>
         <button class="btn-small" onclick="importState()">Import JSON</button>
+        <button class="btn-small" onclick="clearState()">Clear</button>
       </div>
-      <div id="warnings"></div>
+      <div id="warnings" role="status"></div>
     </div>
-    <div class="yout" id="yaml-out"></div>
-    <input type="file" id="import-file" accept="application/json" style="display:none" onchange="handleImportFile(event)">
+    <div class="yout" id="yaml-out" tabindex="0" aria-label="Generated YAML"></div>
+    <input type="file" id="import-file" accept="application/json" hidden onchange="handleImportFile(event)">
   </div>
 </div>
 
+<datalist id="connection-options">
+  <option value="ansible.netcommon.network_cli">
+  <option value="ansible.netcommon.httpapi">
+  <option value="ansible.netcommon.netconf">
+  <option value="ssh">
+  <option value="local">
+</datalist>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.1/js-yaml.min.js" integrity="sha512-Ccva9tZjPfyRDMMosATBaEnAKvX+eBbDfHMnr+0LhTa+NMqKRxUAoDGPotb8biwzQ6xnf4IYuDaPiXw10DYaNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 let state = [];
-let dragData = null;
+let dragData = null;      // { type, module?, preset? } from the library, or { type, moveId } for an item being moved
+let activeZone = null;    // the drop zone highlighted during a drag
+let clickTarget = { parentId: 'root', section: 'children' };  // where clicking a library item adds it
+let pendingFocus = null;  // data-key of the field to focus after the next render
+let yamlProblem = null;
+let typingKey = null;
+let typingAt = 0;
+let fieldSeq = 0;
+const changeHistory = { undo: [], redo: [] };
+
+const STORAGE_KEY = 'ansiblePlaybookBuilderState';
+const SNAPSHOT_KEY = 'ansiblePlaybookBuilderSnapshot';
+const ITEM_TYPES = ['play', 'task', 'block'];
+const SECTIONS = ['children', 'rescue', 'always', 'handlers'];
+const OTHER = '__other__';
+
+// lineWidth -1 stops long commands being folded; noRefs stops shared default
+// objects turning into YAML anchors. js-yaml's default compat mode also quotes
+// strings that YAML 1.1 (PyYAML, which Ansible uses) would read as non-strings.
+const YAML_OPTIONS = { lineWidth: -1, noRefs: true, quotingType: '"', skipInvalid: true };
 
 const DEFAULTS = {
-  play: { name: 'Configure Network', hosts: 'all', gather_facts: 'no', vars: [] },
+  play: { name: 'Configure Network', hosts: 'all', connection: '', gather_facts: 'no' },
   task: { name: 'Execute Task', module: 'ansible.builtin.debug' },
   block: { name: 'Main Logic Block' }
 };
 
-const MODULE_OPTIONS = [
-  { label: 'Cisco IOS Config', value: 'cisco.ios.ios_config' },
-  { label: 'Cisco NXOS Config', value: 'cisco.nxos.nxos_config' },
-  { label: 'Shell Script', value: 'ansible.builtin.shell' },
-  { label: 'Debug', value: 'ansible.builtin.debug' },
-  { label: 'Command', value: 'ansible.builtin.command' },
-  { label: 'Copy', value: 'ansible.builtin.copy' },
-  { label: 'File', value: 'ansible.builtin.file' },
-  { label: 'Service', value: 'ansible.builtin.service' },
-  { label: 'Template', value: 'ansible.builtin.template' },
-  { label: 'Assert', value: 'ansible.builtin.assert' },
-  { label: 'Fail', value: 'ansible.builtin.fail' },
-  { label: 'IOS Command', value: 'cisco.ios.ios_command' },
-  { label: 'IOS Facts', value: 'cisco.ios.ios_facts' },
-  { label: 'IOS Interfaces', value: 'cisco.ios.ios_interfaces' },
-  { label: 'NXOS Command', value: 'cisco.nxos.nxos_command' },
-  { label: 'NXOS Facts', value: 'cisco.nxos.nxos_facts' },
-  { label: 'NXOS Interfaces', value: 'cisco.nxos.nxos_interfaces' }
-];
-
-const MODULE_DEFAULT_PARAMS = {
-  'cisco.ios.ios_config': { lines: 'interface GigabitEthernet1/0/1\ndescription Configured by Ansible' },
-  'cisco.nxos.nxos_config': { lines: 'interface Ethernet1/1\ndescription Configured by Ansible' },
-  'ansible.builtin.shell': { cmd: 'echo hello' },
-  'ansible.builtin.debug': { msg: 'Debugging task' },
-  'ansible.builtin.command': { cmd: 'show version' },
-  'ansible.builtin.copy': { src: '/path/to/source', dest: '/path/to/dest' },
-  'ansible.builtin.file': { path: '/path/to/file', state: 'touch' },
-  'ansible.builtin.service': { name: 'httpd', state: 'started' },
-  'ansible.builtin.template': { src: 'template.j2', dest: '/path/to/dest' },
-  'ansible.builtin.assert': { that: 'some_condition' },
-  'ansible.builtin.fail': { msg: 'Task failed' },
-  'cisco.ios.ios_command': { commands: 'show version' },
-  'cisco.ios.ios_facts': { gather_subset: 'all' },
-  'cisco.ios.ios_interfaces': { config: [{ name: 'GigabitEthernet1/0/1', description: 'Configured by Ansible' }] },
-  'cisco.nxos.nxos_command': { commands: 'show version' },
-  'cisco.nxos.nxos_facts': { gather_subset: 'all' },
-  'cisco.nxos.nxos_interfaces': { config: [{ name: 'Ethernet1/1', description: 'Configured by Ansible' }] }
+const PLAY_PRESETS = {
+  plain: { label: 'Play (Host Group)' },
+  ios: { label: 'Play (Cisco IOS)', connection: 'ansible.netcommon.network_cli', networkOs: 'cisco.ios.ios' },
+  nxos: { label: 'Play (Cisco NX-OS)', connection: 'ansible.netcommon.network_cli', networkOs: 'cisco.nxos.nxos' }
 };
 
-document.querySelectorAll('.bitem').forEach(el => {
-  el.ondragstart = (e) => {
-    dragData = { type: el.dataset.type, module: el.dataset.mod };
-  };
-});
+// Offered by "+ Add keyword…"; anything else can be added with "Other…".
+const KEYWORDS = {
+  play: ['become', 'become_user', 'serial', 'strategy', 'any_errors_fatal', 'max_fail_percentage', 'ignore_errors', 'ignore_unreachable', 'order', 'run_once'],
+  task: ['register', 'loop', 'notify', 'listen', 'ignore_errors', 'changed_when', 'failed_when', 'until', 'retries', 'delay', 'delegate_to', 'run_once', 'no_log', 'check_mode', 'become_user'],
+  block: ['ignore_errors', 'delegate_to', 'run_once', 'any_errors_fatal', 'no_log', 'become_user']
+};
 
-function drop(e, parentId, section = 'children') {
-  e.preventDefault(); e.stopPropagation();
-  if (!dragData) return;
-  const newItem = {
-    id: 'id_' + Math.random().toString(36).substr(2, 9),
-    type: dragData.type,
-    params: { ...DEFAULTS[dragData.type] },
-    moduleArgs: dragData.type === 'task' ? { ...(MODULE_DEFAULT_PARAMS[dragData.module] || {}) } : {},
+// Every module the builder knows: it drives the library, the module dropdown, default
+// arguments, and which input each argument gets. Argument kinds were taken from
+// `ansible-doc -j <module>`: 'str', 'int', 'bool', 'list' (one item per line), 'yaml'
+// (nested data edited as YAML), or a list of allowed choices.
+const MODULES = [
+  { name: 'ansible.builtin.shell', label: 'Shell Script', group: 'Ansible builtins',
+    defaults: { cmd: 'echo hello' },
+    args: {
+      chdir: 'str', cmd: 'str', creates: 'str', executable: 'str', removes: 'str', stdin: 'str',
+      stdin_add_newline: { kind: 'bool', default: true }
+    } },
+  { name: 'ansible.builtin.command', label: 'Command', group: 'Ansible builtins',
+    defaults: { cmd: 'uptime' },
+    args: {
+      argv: 'list', chdir: 'str', cmd: 'str', creates: 'str',
+      expand_argument_vars: { kind: 'bool', default: true }, removes: 'str', stdin: 'str',
+      stdin_add_newline: { kind: 'bool', default: true },
+      strip_empty_ends: { kind: 'bool', default: true }
+    } },
+  { name: 'ansible.builtin.copy', label: 'Copy', group: 'Ansible builtins',
+    defaults: { src: '/path/to/source', dest: '/path/to/dest' },
+    args: {
+      dest: { kind: 'str', required: true }, attributes: { kind: 'str', aliases: ['attr'] },
+      backup: { kind: 'bool', default: false }, checksum: 'str', content: 'str',
+      decrypt: { kind: 'bool', default: true }, directory_mode: 'str',
+      follow: { kind: 'bool', default: false }, force: { kind: 'bool', default: true }, group: 'str',
+      local_follow: 'bool', mode: 'str', owner: 'str', remote_src: { kind: 'bool', default: false },
+      selevel: 'str', serole: 'str', setype: 'str', seuser: 'str', src: 'str',
+      unsafe_writes: { kind: 'bool', default: false }, validate: 'str'
+    } },
+  { name: 'ansible.builtin.file', label: 'File', group: 'Ansible builtins',
+    defaults: { path: '/path/to/file', state: 'touch' },
+    args: {
+      path: { kind: 'str', required: true, aliases: ['dest', 'name'] }, access_time: 'str',
+      access_time_format: 'str', attributes: { kind: 'str', aliases: ['attr'] },
+      follow: { kind: 'bool', default: true }, force: { kind: 'bool', default: false }, group: 'str',
+      mode: 'str', modification_time: 'str', modification_time_format: 'str', owner: 'str',
+      recurse: { kind: 'bool', default: false }, selevel: 'str', serole: 'str', setype: 'str', seuser: 'str',
+      src: 'str', state: ['absent', 'directory', 'file', 'hard', 'link', 'touch'],
+      unsafe_writes: { kind: 'bool', default: false }
+    } },
+  { name: 'ansible.builtin.service', label: 'Service', group: 'Ansible builtins',
+    defaults: { name: 'httpd', state: 'started' },
+    args: {
+      name: { kind: 'str', required: true }, arguments: { kind: 'str', aliases: ['args'] },
+      enabled: 'bool', pattern: 'str', runlevel: 'str', sleep: 'int',
+      state: ['reloaded', 'restarted', 'started', 'stopped'], use: 'str'
+    } },
+  { name: 'ansible.builtin.template', label: 'Template', group: 'Ansible builtins',
+    defaults: { src: 'template.j2', dest: '/path/to/dest' },
+    args: {
+      dest: { kind: 'str', required: true }, src: { kind: 'str', required: true },
+      attributes: { kind: 'str', aliases: ['attr'] }, backup: { kind: 'bool', default: false },
+      block_end_string: 'str', block_start_string: 'str', comment_end_string: 'str',
+      comment_start_string: 'str', follow: { kind: 'bool', default: false },
+      force: { kind: 'bool', default: true }, group: 'str',
+      lstrip_blocks: { kind: 'bool', default: false }, mode: 'str',
+      newline_sequence: { choices: ['\\n', '\\r', '\\r\\n'], default: '\\n' }, output_encoding: 'str',
+      owner: 'str', selevel: 'str', serole: 'str', setype: 'str', seuser: 'str',
+      trim_blocks: { kind: 'bool', default: true }, unsafe_writes: { kind: 'bool', default: false },
+      validate: 'str', variable_end_string: 'str', variable_start_string: 'str'
+    } },
+  { name: 'ansible.builtin.debug', label: 'Debug', group: 'Ansible builtins',
+    defaults: { msg: 'Debugging task' },
+    args: {
+      msg: 'str', var: 'str', verbosity: 'int'
+    } },
+  { name: 'ansible.builtin.assert', label: 'Assert', group: 'Ansible builtins',
+    defaults: { that: ['inventory_hostname is defined'] },
+    args: {
+      that: { kind: 'list', required: true }, fail_msg: { kind: 'str', aliases: ['msg'] },
+      quiet: { kind: 'bool', default: false }, success_msg: 'str'
+    } },
+  { name: 'ansible.builtin.fail', label: 'Fail', group: 'Ansible builtins',
+    defaults: { msg: 'Task failed' },
+    args: {
+      msg: 'str'
+    } },
+  { name: 'cisco.ios.ios_config', label: 'IOS Config', group: 'Cisco IOS',
+    defaults: { lines: ['description Configured by Ansible'], parents: ['interface GigabitEthernet1/0/1'] },
+    args: {
+      after: 'list', backup: { kind: 'bool', default: false }, backup_options: { kind: 'yaml', empty: { } },
+      before: 'list', content: 'str', defaults: { kind: 'bool', default: false },
+      diff_against: ['running', 'startup', 'intended'], diff_ignore_lines: 'list', intended_config: 'str',
+      lines: { kind: 'list', aliases: ['commands'] },
+      match: { choices: ['line', 'strict', 'exact', 'none'], default: 'line' }, multiline_delimiter: 'str',
+      parents: 'list', replace: { choices: ['line', 'block'], default: 'line' },
+      running_config: { kind: 'str', aliases: ['config'] },
+      save_when: { choices: ['always', 'never', 'modified', 'changed'], default: 'never' }, src: 'str'
+    } },
+  { name: 'cisco.ios.ios_command', label: 'IOS Command', group: 'Cisco IOS',
+    defaults: { commands: ['show version'] },
+    args: {
+      commands: { kind: 'list', required: true }, interval: 'int',
+      match: { choices: ['any', 'all'], default: 'all' }, retries: 'int',
+      wait_for: { kind: 'list', aliases: ['waitfor'] }
+    } },
+  { name: 'cisco.ios.ios_facts', label: 'IOS Facts', group: 'Cisco IOS',
+    defaults: { gather_subset: ['all'] },
+    args: {
+      available_network_resources: { kind: 'bool', default: false }, gather_network_resources: 'list',
+      gather_subset: 'list'
+    } },
+  { name: 'cisco.ios.ios_interfaces', label: 'IOS Interfaces', group: 'Cisco IOS',
+    defaults: { config: [{ name: 'GigabitEthernet1/0/1', description: 'Configured by Ansible' }], state: 'merged' },
+    args: {
+      config: { kind: 'yaml', empty: [] }, running_config: 'str',
+      state: { choices: ['merged', 'replaced', 'overridden', 'deleted', 'rendered', 'gathered', 'purged', 'parsed'], default: 'merged' }
+    } },
+  { name: 'cisco.nxos.nxos_config', label: 'NXOS Config', group: 'Cisco NX-OS',
+    defaults: { lines: ['description Configured by Ansible'], parents: ['interface Ethernet1/1'] },
+    args: {
+      after: 'list', backup: { kind: 'bool', default: false }, backup_options: { kind: 'yaml', empty: { } },
+      before: 'list', content: 'str', defaults: { kind: 'bool', default: false },
+      diff_against: ['startup', 'intended', 'running'], diff_ignore_lines: 'list', intended_config: 'str',
+      lines: { kind: 'list', aliases: ['commands'] },
+      match: { choices: ['line', 'strict', 'exact', 'none'], default: 'line' }, parents: 'list',
+      replace: { choices: ['line', 'block', 'config'], default: 'line' }, replace_src: 'str',
+      running_config: { kind: 'str', aliases: ['config'] },
+      save_when: { choices: ['always', 'never', 'modified', 'changed'], default: 'never' }, src: 'str'
+    } },
+  { name: 'cisco.nxos.nxos_command', label: 'NXOS Command', group: 'Cisco NX-OS',
+    defaults: { commands: ['show version'] },
+    args: {
+      commands: { kind: 'list', required: true }, interval: 'int',
+      match: { choices: ['any', 'all'], default: 'all' }, retries: 'int',
+      wait_for: { kind: 'list', aliases: ['waitfor'] }
+    } },
+  { name: 'cisco.nxos.nxos_facts', label: 'NXOS Facts', group: 'Cisco NX-OS',
+    defaults: { gather_subset: ['all'] },
+    args: {
+      available_network_resources: { kind: 'bool', default: false }, gather_network_resources: 'list',
+      gather_subset: 'list'
+    } },
+  { name: 'cisco.nxos.nxos_interfaces', label: 'NXOS Interfaces', group: 'Cisco NX-OS',
+    defaults: { config: [{ name: 'Ethernet1/1', description: 'Configured by Ansible' }], state: 'merged' },
+    args: {
+      config: { kind: 'yaml', empty: [] }, running_config: 'str',
+      state: { choices: ['merged', 'replaced', 'overridden', 'deleted', 'gathered', 'rendered', 'parsed', 'purged'], default: 'merged' }
+    } }
+];
+
+const MODULE_GROUPS = [...new Set(MODULES.map(m => m.group))];
+
+function moduleInfo(name) {
+  return MODULES.find(m => m.name === name);
+}
+
+// Looks up one argument by name or alias and returns { name, kind, choices?, required?, ... }.
+function argSpec(module, name) {
+  if (!module) return null;
+  const entry = Object.entries(module.args).find(([argName, spec]) => argName === name || spec.aliases?.includes(name));
+  if (!entry) return null;
+  const [argName, spec] = entry;
+  if (typeof spec === 'string') return { name: argName, kind: spec };
+  if (Array.isArray(spec)) return { name: argName, kind: 'choice', choices: spec };
+  return { ...spec, name: argName, kind: spec.choices ? 'choice' : spec.kind };
+}
+
+// The value a newly added argument starts with.
+function newArgValue(spec) {
+  if (!spec) return '';
+  if (spec.kind === 'list') return [];
+  if (spec.kind === 'yaml') return structuredClone(spec.empty ?? {});
+  if (spec.kind === 'bool') return spec.default === undefined ? true : !spec.default;  // adding a flag usually means changing it
+  if (spec.kind === 'choice') return spec.default ?? spec.choices[0];
+  return '';
+}
+
+function newId() {
+  return 'id_' + Math.random().toString(36).slice(2, 11);
+}
+
+function newItem(data) {
+  const item = {
+    id: newId(),
+    type: data.type,
+    params: { ...DEFAULTS[data.type] },
+    moduleArgs: {},
     custom: [],
     vars: [],
     when: '',
     tags: '',
     become: '',
-    children: [],
-    rescue: [],
-    always: []
+    collapsed: false
   };
-  if (dragData.module) {
-    newItem.params = {
-      ...newItem.params,
-      module: dragData.module
-    };
+  SECTIONS.forEach(section => { item[section] = []; });
+  if (data.type === 'task') {
+    item.params.module = data.module;
+    item.moduleArgs = structuredClone(moduleInfo(data.module)?.defaults || {});
   }
-
-  if (parentId === 'root') {
-    if (!canDropOn('root', 'children')) {
-      alert('Only plays may be added at the top level.');
-      return;
-    }
-    state.push(newItem);
-  } else {
-    const parent = findById(state, parentId);
-    if (!parent || !canDropOn(parent.type, section)) {
-      return;
-    }
-    if (section === 'rescue') parent.rescue.push(newItem);
-    else if (section === 'always') parent.always.push(newItem);
-    else parent.children.push(newItem);
-  }
-  render();
-  dragData = null;
+  const preset = data.type === 'play' ? PLAY_PRESETS[data.preset] : null;
+  if (preset?.connection) item.params.connection = preset.connection;
+  if (preset?.networkOs) item.vars.push({ k: 'ansible_network_os', v: preset.networkOs });
+  return item;
 }
 
-function canDropOn(parentType, section) {
-  if (!dragData) return false;
-  if (parentType === 'root') return dragData.type === 'play';
-  if (section === 'children') return parentType !== 'task';
-  return parentType === 'block';
-}
-
-function onDragOverZone(e, parentType, section) {
-  e.preventDefault();
-  const target = e.currentTarget;
-  if (canDropOn(parentType, section)) {
-    target.classList.add('on');
-  } else {
-    target.classList.remove('on');
-  }
-}
-
-function onDragLeaveZone(e) {
-  e.currentTarget.classList.remove('on');
-}
-
-function downloadYaml() {
-  const yamlText = document.getElementById('yaml-out').textContent;
-  const blob = new Blob([yamlText], { type: 'text/yaml;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'playbook.yml';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
-}
-
-function yamlValue(value, indent) {
-  if (typeof value === 'string' && value.includes('\n')) {
-    const lines = value.split('\n');
-    return `|\n${lines.map(line => ' '.repeat(indent) + line).join('\n')}\n`;
-  }
-  return String(value);
-}
-
-function yamlSerialize(obj, indent = 0, afterDash = false) {
-  let res = '';
-  const space = ' '.repeat(indent);
-  if (Array.isArray(obj)) {
-    obj.forEach(item => {
-      res += `${space}- ${yamlSerialize(item, indent + 2, true)}\n`;
-    });
-  } else if (typeof obj === 'object' && obj !== null) {
-    let first = true;
-    Object.entries(obj).forEach(([k, v]) => {
-      const lineSpace = afterDash && first ? '' : space;
-      first = false;
-      if (Array.isArray(v)) {
-        res += `${lineSpace}${k}:\n`;
-        v.forEach(item => {
-          res += `${space}  - ${yamlSerialize(item, indent + 2, true)}\n`;
-        });
-      } else if (typeof v === 'object' && v !== null) {
-        res += `${lineSpace}${k}:\n${yamlSerialize(v, indent + 2, false)}`;
-      } else {
-        const formatted = yamlValue(v, indent + 2);
-        if (typeof v === 'string' && v.includes('\n')) {
-          res += `${lineSpace}${k}: ${formatted}`;
-        } else {
-          res += `${lineSpace}${k}: ${formatted}\n`;
-        }
-      }
-    });
-  } else {
-    return yamlValue(obj, indent);
-  }
-  return res;
-}
-
-function changeTaskModule(itemId, module) {
-  const item = findById(state, itemId);
-  if (!item) return;
-  item.params.module = module;
-  item.moduleArgs = { ...(MODULE_DEFAULT_PARAMS[module] || {}) };
-  render();
-}
-
-function saveToLocalStorage() {
-  try {
-    localStorage.setItem('ansiblePlaybookBuilderState', JSON.stringify(state));
-  } catch (error) {
-    console.warn('LocalStorage save failed', error);
-  }
-}
-
-function saveState() {
-  saveToLocalStorage();
-  updateWarnings('Saved current builder state locally.');
-}
-
-function loadState() {
-  const saved = localStorage.getItem('ansiblePlaybookBuilderState');
-  if (!saved) {
-    updateWarnings('No saved state found.');
-    return;
-  }
-  try {
-    state = JSON.parse(saved);
-    normalizeState(state);
-    render();
-    updateWarnings('Loaded saved state.');
-  } catch (error) {
-    updateWarnings('Failed to load saved state. JSON was invalid.');
-  }
-}
-
-function clearState() {
-  state = [];
-  localStorage.removeItem('ansiblePlaybookBuilderState');
-  render();
-  updateWarnings('Cleared builder state.');
-}
-
-function exportState() {
-  const json = JSON.stringify(state, null, 2);
-  const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'ansible-builder-state.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
-}
-
-function importState() {
-  const fileInput = document.getElementById('import-file');
-  if (fileInput) fileInput.click();
-}
-
-function handleImportFile(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const imported = JSON.parse(reader.result);
-      state = imported;
-      normalizeState(state);
-      render();
-      updateWarnings('Imported builder state.');
-    } catch (error) {
-      updateWarnings('Invalid JSON file. Import failed.');
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-function updateWarnings(message) {
-  const warningsContainer = document.getElementById('warnings');
-  const warnings = [];
-  state.forEach(play => {
-    if (!play.children.length) {
-      warnings.push(`Play "${play.params.name}" has no tasks.`);
-    }
-    play.custom.forEach(c => {
-      if (!c.k) warnings.push(`Play "${play.params.name}" has an empty custom parameter name.`);
-    });
-    (play.vars || []).forEach(v => {
-      if (!v.k) warnings.push(`Play "${play.params.name}" has a var with an empty name.`);
-    });
-    walkItems(play.children, item => {
-      if (item.type === 'task') {
-        if (!item.params.module) warnings.push(`Task "${item.params.name}" is missing a module.`);
-        if (item.children.length || item.rescue.length || item.always.length) warnings.push(`Task "${item.params.name}" has unsupported nested content.`);
-      }
-      if (item.type === 'block' && !item.children.length && !item.rescue.length && !item.always.length) {
-        warnings.push(`Block "${item.params.name}" is empty.`);
-      }
-      item.custom.forEach(c => {
-        if (!c.k) warnings.push(`Item "${item.params.name}" has an empty custom parameter name.`);
-      });
-    });
-  });
-  let html = message ? `<p>${message}</p>` : '';
-  if (warnings.length) {
-    html += `<p>Warnings:</p><ul>` + warnings.map(w => `<li>${w}</li>`).join('') + `</ul>`;
-  } else if (!message) {
-    html += '<p>No warnings detected.</p>';
-  }
-  warningsContainer.innerHTML = html;
-}
-
-function walkItems(items, callback) {
+function walkItems(items, callback, parent = null) {
   items.forEach(item => {
-    callback(item);
-    walkItems(item.children, callback);
-    walkItems(item.rescue, callback);
-    walkItems(item.always, callback);
+    callback(item, parent);
+    SECTIONS.forEach(section => walkItems(item[section], callback, item));
   });
 }
 
 function findById(arr, id) {
-  for (let item of arr) {
+  for (const item of arr) {
     if (item.id === id) return item;
-    let found = findById(item.children, id) || findById(item.rescue, id) || findById(item.always, id);
-    if (found) return found;
+    for (const section of SECTIONS) {
+      const found = findById(item[section], id);
+      if (found) return found;
+    }
   }
   return null;
 }
 
-function addParam(id) {
+// Returns the list an item is in and its position there.
+function locate(id, list = state) {
+  for (let index = 0; index < list.length; index++) {
+    if (list[index].id === id) return { list, index };
+    for (const section of SECTIONS) {
+      const found = locate(id, list[index][section]);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function containerOf(parentId, section) {
+  return parentId === 'root' ? state : findById(state, parentId)?.[section];
+}
+
+function topPlayOf(id) {
+  return state.find(play => play.id === id || findById([play], id));
+}
+
+// ---- Drag and drop -------------------------------------------------------------
+
+function canDropOn(parentType, section, data) {
+  if (!data) return false;
+  if (parentType === 'root') return data.type === 'play';
+  if (data.type === 'play' || parentType === 'task') return false;
+  if (section === 'handlers') return parentType === 'play' && data.type === 'task';
+  return section === 'children' || parentType === 'block';
+}
+
+// An item can't be moved into itself or anything nested inside it.
+function isOwnDescendant(parentId, data) {
+  if (!data?.moveId || parentId === 'root') return false;
+  const moving = findById(state, data.moveId);
+  return parentId === data.moveId || (!!moving && !!findById([moving], parentId));
+}
+
+function accepts(parentId, section, data) {
+  const parentType = parentId === 'root' ? 'root' : findById(state, parentId)?.type;
+  return canDropOn(parentType, section, data) && !isOwnDescendant(parentId, data);
+}
+
+function startDrag(e, data) {
+  dragData = data;
+  e.dataTransfer.effectAllowed = 'copyMove';
+  e.dataTransfer.setData('application/x-scransible', data.moveId || data.type);  // Firefox won't start a drag without data
+}
+
+function endDrag() {
+  dragData = null;
+  setActiveZone(null);
+  document.querySelectorAll('.cblock.dragging').forEach(block => block.classList.remove('dragging'));
+}
+
+function setActiveZone(zone) {
+  if (activeZone === zone) return;
+  activeZone?.classList.remove('on');
+  activeZone = zone;
+  zone?.classList.add('on');
+}
+
+// Zones that can't take the dragged item leave the event alone, so an outer zone can.
+function wireZone(zone, parentId, section) {
+  zone.dataset.parent = parentId;
+  zone.dataset.section = section;
+  const over = e => {
+    if (!accepts(parentId, section, dragData)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = dragData.moveId ? 'move' : 'copy';
+    setActiveZone(zone);
+  };
+  zone.addEventListener('dragenter', over);
+  zone.addEventListener('dragover', over);
+  zone.addEventListener('dragleave', e => {
+    if (zone === activeZone && !zone.contains(e.relatedTarget)) setActiveZone(null);
+  });
+  zone.addEventListener('drop', e => {
+    if (!accepts(parentId, section, dragData)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const data = dragData;
+    const index = dropIndex(zone, e.clientY);
+    endDrag();
+    insertItem(data, parentId, section, index);
+  });
+  return zone;
+}
+
+// Position among the zone's blocks that the pointer is over.
+function dropIndex(zone, y) {
+  const blocks = [...zone.children].filter(child => child.classList.contains('cblock'));
+  const index = blocks.findIndex(block => {
+    const rect = block.getBoundingClientRect();
+    return y < rect.top + rect.height / 2;
+  });
+  return index === -1 ? blocks.length : index;
+}
+
+function insertItem(data, parentId, section, index) {
+  const target = containerOf(parentId, section);
+  const from = data.moveId ? locate(data.moveId) : null;
+  if (!target || (data.moveId && !from)) return;
+  checkpoint();
+  let item;
+  if (from) {
+    [item] = from.list.splice(from.index, 1);
+    if (from.list === target && from.index < index) index -= 1;
+  } else {
+    item = newItem(data);
+    pendingFocus = `${item.id}:name`;
+  }
+  target.splice(index ?? target.length, 0, item);
+  render();
+}
+
+// Clicking a library item adds it to the area last clicked on the canvas, or else
+// to the enclosing (or last) play.
+function addFromLibrary(data) {
+  if (data.type === 'play') {
+    insertItem(data, 'root', 'children', state.length);
+    return;
+  }
+  if (!state.length) insertItem({ type: 'play', preset: 'plain' }, 'root', 'children', 0);
+  let { parentId, section } = clickTarget;
+  if (!accepts(parentId, section, data)) {
+    parentId = (topPlayOf(parentId) || state[state.length - 1]).id;
+    section = 'children';
+  }
+  insertItem(data, parentId, section, containerOf(parentId, section).length);
+}
+
+function targetFromElement(node) {
+  const hit = node?.closest?.('.dz, .cblock, #canvas');
+  if (!hit) return null;
+  if (hit.classList.contains('cblock') && hit.dataset.type !== 'task') return { parentId: hit.dataset.id, section: 'children' };
+  const zone = hit.classList.contains('cblock') ? hit.parentElement.closest('.dz, #canvas') : hit;
+  return zone ? { parentId: zone.dataset.parent, section: zone.dataset.section } : null;
+}
+
+function setClickTarget(target) {
+  if (!target || (target.parentId === clickTarget.parentId && target.section === clickTarget.section)) return;
+  clickTarget = target;
+  highlightClickTarget();
+}
+
+function highlightClickTarget() {
+  document.querySelectorAll('.dz.target').forEach(zone => zone.classList.remove('target'));
+  if (clickTarget.parentId === 'root') return;
+  const zone = [...document.querySelectorAll('#canvas .dz')]
+    .find(z => z.dataset.parent === clickTarget.parentId && z.dataset.section === clickTarget.section);
+  zone?.classList.add('target');
+}
+
+// ---- Editing ---------------------------------------------------------------------
+
+function moveBy(id, delta) {
+  const loc = locate(id);
+  const to = loc ? loc.index + delta : -1;
+  if (!loc || to < 0 || to >= loc.list.length) return;
+  checkpoint();
+  loc.list.splice(to, 0, loc.list.splice(loc.index, 1)[0]);
+  pendingFocus = `${id}:${delta < 0 ? 'up' : 'down'}`;
+  render();
+}
+
+function duplicateItem(id) {
+  const loc = locate(id);
+  if (!loc) return;
+  checkpoint();
+  const copy = structuredClone(loc.list[loc.index]);
+  walkItems([copy], item => { item.id = newId(); });
+  loc.list.splice(loc.index + 1, 0, copy);
+  pendingFocus = `${copy.id}:name`;
+  render();
+}
+
+function deleteItem(id) {
+  const loc = locate(id);
+  if (!loc) return;
+  checkpoint();
+  loc.list.splice(loc.index, 1);
+  render();
+  updateWarnings('Deleted. Undo brings it back.');
+}
+
+function toggleCollapsed(item, block, toggle) {
+  item.collapsed = !item.collapsed;
+  block.classList.toggle('collapsed', item.collapsed);
+  block.querySelector(':scope > .bbody').hidden = item.collapsed;
+  toggle.textContent = item.collapsed ? '▶' : '▼';
+  toggle.setAttribute('aria-expanded', String(!item.collapsed));
+  saveToLocalStorage();
+}
+
+// Switching modules keeps arguments you changed if the new module accepts them;
+// everything else starts from the new module's defaults.
+function changeTaskModule(itemId, module) {
+  const item = findById(state, itemId);
+  if (!item) return;
+  checkpoint();
+  const oldDefaults = moduleInfo(item.params.module)?.defaults || {};
+  const next = moduleInfo(module);
+  const args = structuredClone(next?.defaults || {});
+  const dropped = [];
+  Object.entries(item.moduleArgs).forEach(([name, value]) => {
+    if (JSON.stringify(value) === JSON.stringify(oldDefaults[name])) return;
+    if (!next || argSpec(next, name)) args[name] = value;
+    else dropped.push(name);
+  });
+  item.params.module = module;
+  item.moduleArgs = args;
+  render();
+  if (dropped.length) updateWarnings(`${module} has no ${dropped.join(', ')} option, so ${dropped.length > 1 ? 'they were' : 'it was'} removed. Undo brings ${dropped.length > 1 ? 'them' : 'it'} back.`);
+}
+
+function addParam(id, name) {
   const item = findById(state, id);
-  const key = prompt("Parameter name (e.g., lines, parents, state):");
-  if (!key) return;
-  const value = prompt(`Value for ${key}:`);
-  item.custom.push({ k: key, v: value ?? '' });
+  const key = name ?? prompt('Keyword or parameter name (e.g. register, loop, notify):')?.trim();
+  if (!item || !key) return;
+  checkpoint();
+  item.custom.push({ k: key, v: '' });
+  pendingFocus = `${id}:custom:${item.custom.length - 1}`;
   render();
 }
 
 function removeParam(itemId, index) {
   const item = findById(state, itemId);
   if (!item) return;
+  checkpoint();
   item.custom.splice(index, 1);
   render();
 }
 
 function addVar(id) {
   const item = findById(state, id);
-  const key = prompt("Var name:");
-  if (!key) return;
-  const value = prompt(`Value for ${key}:`);
-  item.vars.push({ k: key, v: value ?? '' });
+  const key = prompt('Var name:')?.trim();
+  if (!item || !key) return;
+  checkpoint();
+  item.vars.push({ k: key, v: '' });
+  pendingFocus = `${id}:var:${item.vars.length - 1}`;
   render();
 }
 
 function removeVar(itemId, index) {
   const item = findById(state, itemId);
   if (!item) return;
+  checkpoint();
   item.vars.splice(index, 1);
   render();
 }
 
-function addModuleArg(id) {
+function addModuleArg(id, name) {
   const item = findById(state, id);
-  const key = prompt("Module argument name:");
-  if (!key) return;
-  const value = prompt(`Value for ${key}:`);
-  item.moduleArgs[key] = value ?? '';
+  const key = name ?? prompt('Module argument name:')?.trim();
+  if (!item || !key) return;
+  if (!(key in item.moduleArgs)) {
+    checkpoint();
+    item.moduleArgs[key] = newArgValue(argSpec(moduleInfo(item.params.module), key));
+  }
+  pendingFocus = `${id}:arg:${key}`;
   render();
 }
 
 function removeModuleArg(itemId, key) {
   const item = findById(state, itemId);
   if (!item) return;
+  checkpoint();
   delete item.moduleArgs[key];
   render();
 }
 
-function deleteItem(id) {
-  const remove = (arr) => {
-    const idx = arr.findIndex(x => x.id === id);
-    if (idx > -1) { arr.splice(idx, 1); return true; }
-    return arr.some(x => remove(x.children) || remove(x.rescue) || remove(x.always));
+// ---- Undo / redo -----------------------------------------------------------------
+
+function checkpoint() {
+  changeHistory.undo.push(JSON.stringify(state));
+  if (changeHistory.undo.length > 100) changeHistory.undo.shift();
+  changeHistory.redo = [];
+  typingKey = null;
+}
+
+// Typing in one field counts as one change until you pause or move to another field.
+function typingCheckpoint(key) {
+  const now = Date.now();
+  if (key !== typingKey || now - typingAt > 1500) {
+    checkpoint();
+    typingKey = key;
   }
-  remove(state);
+  typingAt = now;
+}
+
+function stepHistory(from, to) {
+  if (!from.length) return;
+  to.push(JSON.stringify(state));
+  state = JSON.parse(from.pop());
+  typingKey = null;
   render();
 }
 
-function toggleBlock(btn) {
-  const block = btn.closest('.cblock');
-  const body = block.querySelector('.bbody');
-  const isCollapsed = body.style.display === 'none';
-  body.style.display = isCollapsed ? '' : 'none';
-  btn.textContent = isCollapsed ? '▼' : '▶';
+function undo() {
+  stepHistory(changeHistory.undo, changeHistory.redo);
 }
+
+function redo() {
+  stepHistory(changeHistory.redo, changeHistory.undo);
+}
+
+function updateHistoryButtons() {
+  document.getElementById('undo-btn').disabled = !changeHistory.undo.length;
+  document.getElementById('redo-btn').disabled = !changeHistory.redo.length;
+}
+
+// Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or Ctrl+Y), except inside a text field, where
+// the browser's own undo applies.
+function handleShortcut(e) {
+  if (!(e.metaKey || e.ctrlKey) || e.altKey || e.target.closest?.('input, textarea, select')) return;
+  const key = e.key.toLowerCase();
+  if (key === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    undo();
+  } else if ((key === 'z' && e.shiftKey) || key === 'y') {
+    e.preventDefault();
+    redo();
+  }
+}
+
+// ---- Saving, loading, export -----------------------------------------------------
+
+function readStorage(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveToLocalStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.warn('LocalStorage save failed', error);
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(state));
+    updateWarnings('Saved a snapshot. Load Snapshot returns to it. (Your work is also saved automatically.)');
+  } catch (error) {
+    updateWarnings('Could not save a snapshot: browser storage is unavailable.');
+  }
+}
+
+function loadState() {
+  const saved = readStorage(SNAPSHOT_KEY);
+  if (!saved) {
+    updateWarnings('No snapshot yet. Use Save Snapshot first.');
+    return;
+  }
+  let loaded;
+  try {
+    loaded = parseState(saved);
+  } catch (error) {
+    updateWarnings(`Failed to load the snapshot: ${error.message}`);
+    return;
+  }
+  checkpoint();
+  state = loaded;
+  render();
+  updateWarnings('Loaded the snapshot. Undo returns to what you had.');
+}
+
+function clearState() {
+  if (state.length && !confirm('Remove everything from the canvas? You can undo this.')) return;
+  checkpoint();
+  state = [];
+  render();
+  updateWarnings('Cleared the canvas. Undo brings it back.');
+}
+
+function downloadFile(text, type, filename) {
+  const blob = new Blob([text], { type });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+function downloadYaml() {
+  const yamlText = document.getElementById('yaml-out').textContent;
+  if (!yamlText) {
+    updateWarnings('Nothing to download: no YAML was generated.');
+    return;
+  }
+  downloadFile(yamlText, 'text/yaml;charset=utf-8', 'playbook.yml');
+}
+
+async function copyYaml() {
+  const yamlText = document.getElementById('yaml-out').textContent;
+  if (!yamlText) {
+    updateWarnings('Nothing to copy: no YAML was generated.');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(yamlText);
+  } catch (error) {
+    if (!copyWithSelection(yamlText)) {
+      updateWarnings('Could not copy automatically. Select the YAML and copy it by hand.');
+      return;
+    }
+  }
+  updateWarnings('Copied the YAML to the clipboard.');
+}
+
+// Fallback for browsers that refuse clipboard access: copy from a temporary selection.
+function copyWithSelection(text) {
+  const area = el('textarea', { value: text, readOnly: true, style: 'position:fixed;top:0;left:0;opacity:0;' });
+  document.body.append(area);
+  area.select();
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (error) {
+    copied = false;
+  }
+  area.remove();
+  return copied;
+}
+
+function exportState() {
+  downloadFile(JSON.stringify(state, null, 2), 'application/json;charset=utf-8', 'ansible-builder-state.json');
+}
+
+function importState() {
+  document.getElementById('import-file')?.click();
+}
+
+function handleImportFile(event) {
+  const file = event.target.files?.[0];
+  if (file) readImportFile(file);
+  event.target.value = '';
+}
+
+function readImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let imported;
+    try {
+      imported = parseState(reader.result);
+    } catch (error) {
+      updateWarnings(`Import failed: ${error.message}`);
+      return;
+    }
+    checkpoint();
+    state = imported;
+    render();
+    updateWarnings('Imported builder state. Undo returns to what you had.');
+  };
+  reader.readAsText(file);
+}
+
+// ---- Warnings ----------------------------------------------------------------------
+
+function describe(item) {
+  return `${item.type[0].toUpperCase()}${item.type.slice(1)} "${item.params.name || 'unnamed'}"`;
+}
+
+function hasValue(value) {
+  return value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && !value.length);
+}
+
+function taskWarnings(task, handlerNames) {
+  const name = describe(task);
+  if (!task.params.module) return [`${name} has no module.`];
+  const warnings = [];
+  const module = moduleInfo(task.params.module);
+  if (module) {
+    Object.keys(module.args).forEach(argName => {
+      const spec = argSpec(module, argName);
+      if (spec.required && ![argName, ...(spec.aliases || [])].some(n => hasValue(task.moduleArgs[n]))) {
+        warnings.push(`${name} is missing "${argName}", which ${module.name} requires.`);
+      }
+    });
+    Object.keys(task.moduleArgs).forEach(argName => {
+      if (!argSpec(module, argName)) warnings.push(`${name}: "${argName}" is not an option of ${module.name}.`);
+    });
+  }
+  task.custom.filter(c => c.k === 'notify').forEach(c => {
+    const handler = String(c.v ?? '').trim();
+    if (handler && !handler.includes('{{') && !handlerNames.has(handler)) {
+      warnings.push(`${name} notifies "${handler}", but no handler in this play has that name.`);
+    }
+  });
+  return warnings;
+}
+
+function collectWarnings() {
+  const warnings = yamlProblem ? [yamlProblem] : [];
+  state.forEach(play => {
+    if (!play.children.length) warnings.push(`${describe(play)} has no tasks.`);
+    if (!String(play.params.hosts ?? '').trim()) warnings.push(`${describe(play)} has no hosts.`);
+    const handlerNames = new Set();
+    walkItems(play.handlers, handler => {
+      handlerNames.add(handler.params.name);
+      handler.custom.filter(c => c.k === 'listen').forEach(c => handlerNames.add(String(c.v)));
+    });
+    walkItems([play], (item, parent) => {
+      if (item.type === 'play' && parent) {
+        warnings.push(`${describe(item)} is inside ${describe(parent)}, so it is left out of the YAML. Drag it onto the canvas.`);
+      }
+      item.custom.forEach(c => {
+        if (!String(c.k ?? '').trim()) warnings.push(`${describe(item)} has a keyword with no name.`);
+      });
+      item.vars.forEach(v => {
+        if (!String(v.k ?? '').trim()) warnings.push(`${describe(item)} has a var with no name.`);
+      });
+      if (item.type === 'block' && !item.children.length && !item.rescue.length && !item.always.length) {
+        warnings.push(`${describe(item)} is empty.`);
+      }
+      if (item.type === 'task') warnings.push(...taskWarnings(item, handlerNames));
+    });
+  });
+  return warnings;
+}
+
+function updateWarnings(message) {
+  const warningsContainer = document.getElementById('warnings');
+  const warnings = collectWarnings();
+  const nodes = message ? [el('p', { text: message })] : [];
+  if (warnings.length) {
+    nodes.push(el('p', { text: 'Warnings:' }), el('ul', {}, warnings.map(w => el('li', { text: w }))));
+  } else if (!message) {
+    nodes.push(el('p', { text: 'No warnings detected.' }));
+  }
+  warningsContainer.replaceChildren(...nodes);
+}
+
+// ---- Rendering ---------------------------------------------------------------------
 
 function render() {
   const canvas = document.getElementById('canvas');
-  canvas.innerHTML = state.length ? '' : '<div style="color:#999; text-align:center; padding-top:100px;">Drag a Play here to start</div>';
-  state.forEach(item => canvas.appendChild(buildUI(item)));
+  const scrollTop = canvas.scrollTop;
+  canvas.replaceChildren(...(state.length
+    ? state.map((item, index) => buildUI(item, index, state))
+    : [el('div', { className: 'empty-canvas', text: 'Drag a Play here, or click one in the library, to start.' })]));
+  canvas.scrollTop = scrollTop;
+  if (clickTarget.parentId !== 'root' && !findById(state, clickTarget.parentId)) clickTarget = { parentId: 'root', section: 'children' };
+  highlightClickTarget();
   genYaml();
   updateWarnings();
+  updateHistoryButtons();
+  saveToLocalStorage();
+  focusPending();
+}
+
+function focusPending() {
+  if (!pendingFocus) return;
+  const field = [...document.querySelectorAll('#canvas [data-key]')].find(node => node.dataset.key === pendingFocus);
+  pendingFocus = null;
+  if (!field) return;
+  field.focus();
+  field.select?.();
+}
+
+// Called on every keystroke: refresh the YAML and warnings and autosave, without
+// re-rendering the canvas (which would take focus away from the field being edited).
+function fieldChanged() {
+  genYaml();
+  updateWarnings();
+  updateHistoryButtons();
   saveToLocalStorage();
 }
 
-function buildUI(item) {
-  const div = document.createElement('div');
-  div.className = 'cblock ' + item.type;
-  let html = `<div class="bhead">
-    <button class="btn-toggle" onclick="toggleBlock(this)">▼</button>
-    <span><strong>${item.type.toUpperCase()}</strong>: ${item.params.module || ''}</span>
-    <button class="btn-del" onclick="deleteItem('${item.id}')">×</button>
-  </div><div class="bbody">`;
-
-  // Standard Fields
-  for (let [k, v] of Object.entries(item.params)) {
-    if (item.type === 'task' && k === 'module') {
-      html += `<div class="f-row"><span class="f-label">Module</span><select class="f-input" onchange="changeTaskModule('${item.id}', this.value)">`;
-      MODULE_OPTIONS.forEach(opt => {
-        html += `<option value="${opt.value}" ${opt.value === v ? 'selected' : ''}>${opt.label}</option>`;
-      });
-      html += `</select></div>`;
-    } else if (item.type === 'task' && k !== 'name') {
-      html += `<div class="f-row"><span class="f-label">${k}</span><textarea class="f-input" oninput="findById(state, '${item.id}').params['${k}']=this.value; genYaml()">${v}</textarea></div>`;
-    } else {
-      html += `<div class="f-row"><span class="f-label">${k}</span>
-        <input class="f-input" value="${v}" oninput="findById(state, '${item.id}').params['${k}']=this.value; genYaml()"></div>`;
-    }
-  }
-
-  // Custom Fields
-  item.custom.forEach((c, i) => {
-    html += `<div class="f-row"><span class="f-label">${c.k}</span>
-      <textarea class="f-input" oninput="findById(state, '${item.id}').custom[${i}].v=this.value; genYaml()">${c.v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeParam('${item.id}', ${i})">×</button></div>`;
+// Builds DOM nodes from properties rather than HTML strings, so text that was
+// typed in or imported is never parsed as markup or script.
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  Object.entries(props).forEach(([key, value]) => {
+    if (key === 'text') node.textContent = value;
+    else if (key === 'style') node.style.cssText = value;
+    else if (key === 'attrs') Object.entries(value).forEach(([name, attr]) => node.setAttribute(name, attr));
+    else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+    else node[key] = value;
   });
+  node.append(...children.filter(Boolean));
+  return node;
+}
 
-  if (item.type === 'task') {
-    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Module Arguments</div>`;
-    Object.entries(item.moduleArgs || {}).forEach(([k, v]) => {
-      html += `<div class="f-row"><span class="f-label">${k}</span>
-        <textarea class="f-input" oninput="findById(state, '${item.id}').moduleArgs[${JSON.stringify(k)}]=this.value; genYaml()">${v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeModuleArg('${item.id}', ${JSON.stringify(k)})">×</button></div>`;
-    });
-    html += `<button class="btn-ui" onclick="addModuleArg('${item.id}')">+ Add Module Arg</button>`;
-    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Task Metadata</div>`;
-    html += `<div class="f-row"><span class="f-label">when</span>
-      <textarea class="f-input" oninput="findById(state, '${item.id}').when=this.value; genYaml()">${item.when}</textarea></div>`;
-    html += `<div class="f-row"><span class="f-label">tags</span>
-      <input class="f-input" value="${item.tags}" oninput="findById(state, '${item.id}').tags=this.value; genYaml()"></div>`;
-    html += `<div class="f-row"><span class="f-label">become</span>
-      <input class="f-input" value="${item.become}" oninput="findById(state, '${item.id}').become=this.value; genYaml()"></div>`;
-  }
+function sectionHead(text, extraClass = '') {
+  return el('div', { className: `sub-head ${extraClass}`.trim(), text });
+}
 
-  html += `<button class="btn-ui" onclick="addParam('${item.id}')">+ Custom Parameter</button>`;
+function iconButton(text, label, onclick, { disabled = false, key, extraClass = '' } = {}) {
+  const button = el('button', {
+    className: `btn-icon ${extraClass}`.trim(), type: 'button', text, title: label, disabled,
+    attrs: { 'aria-label': label },
+    onclick: e => { e.stopPropagation(); onclick(); }
+  });
+  if (key) button.dataset.key = key;
+  return button;
+}
 
-  if (item.type === 'block') {
-    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Block Metadata</div>`;
-    html += `<div class="f-row"><span class="f-label">when</span>
-      <textarea class="f-input" oninput="findById(state, '${item.id}').when=this.value; genYaml()">${item.when}</textarea></div>`;
-    html += `<div class="f-row"><span class="f-label">tags</span>
-      <input class="f-input" value="${item.tags}" oninput="findById(state, '${item.id}').tags=this.value; genYaml()"></div>`;
-    html += `<div class="f-row"><span class="f-label">become</span>
-      <input class="f-input" value="${item.become}" oninput="findById(state, '${item.id}').become=this.value; genYaml()"></div>`;
-    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Block Vars</div>`;
-    item.vars.forEach((v, i) => {
-      html += `<div class="f-row"><span class="f-label">${v.k}</span>
-        <textarea class="f-input" oninput="findById(state, '${item.id}').vars[${i}].v=this.value; genYaml()">${v.v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeVar('${item.id}', ${i})">×</button></div>`;
-    });
-    html += `<button class="btn-ui" onclick="addVar('${item.id}')">+ Add Block Var</button>`;
+// A labelled control, with a remove button when `onRemove` is given.
+function row(label, control, onRemove) {
+  control.id = `field-${++fieldSeq}`;
+  const r = el('div', { className: 'f-row' }, [el('label', { className: 'f-label', text: label, htmlFor: control.id }), control]);
+  if (onRemove) {
+    r.append(el('button', { className: 'btn-del', type: 'button', text: '×', title: `Remove ${label}`, attrs: { 'aria-label': `Remove ${label}` }, onclick: onRemove }));
   }
+  return r;
+}
 
-  if (item.type === 'play') {
-    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:#444;">Play Vars</div>`;
-    item.vars.forEach((v, i) => {
-      html += `<div class="f-row"><span class="f-label">${v.k}</span>
-        <textarea class="f-input" oninput="findById(state, '${item.id}').vars[${i}].v=this.value; genYaml()">${v.v}</textarea><button class="btn-del" style="margin-left:8px;" onclick="removeVar('${item.id}', ${i})">×</button></div>`;
-    });
-    html += `<button class="btn-ui" onclick="addVar('${item.id}')">+ Add Play Var</button>`;
-  }
+// A text input. `onEdit(text, input)` runs on every keystroke.
+function fieldRow(label, value, onEdit, { multiline = false, onRemove, key, placeholder, list } = {}) {
+  const text = String(value ?? '');
+  const input = el(multiline ? 'textarea' : 'input', {
+    className: 'f-input',
+    value: text,
+    placeholder: placeholder || '',
+    oninput: e => {
+      if (key) typingCheckpoint(key);
+      onEdit(e.target.value, e.target);
+      fieldChanged();
+    }
+  });
+  if (multiline) input.rows = Math.min(8, Math.max(2, text.split('\n').length));
+  if (key) input.dataset.key = key;
+  if (list) input.setAttribute('list', list);
+  return row(label, input, onRemove);
+}
 
-  // Recursive Containers
-  const canHaveChildren = item.type !== 'task';
-  const canHaveRescue = item.type === 'block';
-  html += `<div class="nested-wrap">`;
-  html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px;">Tasks / Block Content</div>`;
-  if (canHaveChildren) {
-    html += `<div class="dz" ondragenter="onDragOverZone(event, '${item.type}', 'children')" ondragover="onDragOverZone(event, '${item.type}', 'children')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, '${item.id}', 'children')"></div>`;
-  } else {
-    html += `<div style="color:#999; margin-top:10px; font-size:12px;">Tasks cannot contain nested tasks or blocks.</div>`;
-  }
-  if (canHaveRescue) {
-    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:red;">Rescue (On Failure)</div>`;
-    html += `<div class="dz" ondragenter="onDragOverZone(event, '${item.type}', 'rescue')" ondragover="onDragOverZone(event, '${item.type}', 'rescue')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, '${item.id}', 'rescue')"></div>`;
-    html += `<div class="ph" style="background:none; border:none; padding:10px 0 5px; color:orange;">Always</div>`;
-    html += `<div class="dz" ondragenter="onDragOverZone(event, '${item.type}', 'always')" ondragover="onDragOverZone(event, '${item.type}', 'always')" ondragleave="onDragLeaveZone(event)" ondrop="drop(event, '${item.id}', 'always')"></div>`;
-  }
-  html += `</div></div>`;
+function selectRow(label, value, options, onChange, { onRemove, key } = {}) {
+  const select = el('select', {
+    className: 'f-input',
+    onchange: e => {
+      checkpoint();
+      onChange(e.target.value);
+      fieldChanged();
+    }
+  }, options.map(([optionValue, text]) => el('option', { value: optionValue, text, selected: optionValue === value })));
+  if (key) select.dataset.key = key;
+  return row(label, select, onRemove);
+}
 
-  div.innerHTML = html;
-  // Recursively append children
-  const containers = div.querySelectorAll('.dz');
-  let dzIndex = 0;
-  if (canHaveChildren) {
-    item.children.forEach(c => containers[dzIndex].appendChild(buildUI(c)));
-    dzIndex += 1;
+// Lists and mappings (such as the ios_interfaces `config` default) are edited as
+// YAML text. Text that doesn't parse is flagged and leaves the stored value as it was.
+function structuredRow(label, value, onEdit, opts) {
+  const isData = value !== null && typeof value === 'object';
+  const emptyValue = Array.isArray(value) ? [] : isData ? {} : '';
+  const text = !isData ? String(value ?? '')
+    : !Object.keys(value).length ? ''
+    : window.jsyaml ? jsyaml.dump(value, YAML_OPTIONS).trimEnd() : JSON.stringify(value);
+  return fieldRow(label, text, (newText, input) => {
+    try {
+      onEdit(newText.trim() ? jsyaml.load(newText, { schema: jsyaml.CORE_SCHEMA }) ?? null : emptyValue);
+      input.classList.remove('invalid');
+      input.title = '';
+    } catch (error) {
+      input.classList.add('invalid');
+      input.title = error.message;
+    }
+  }, { ...opts, multiline: true, placeholder: 'YAML' });
+}
+
+// One item per line; blank lines are dropped.
+function listRow(label, value, onEdit, opts) {
+  const text = Array.isArray(value) ? value.join('\n') : String(value ?? '');
+  return fieldRow(label, text, newText => onEdit(newText.split('\n').filter(line => line.trim() !== '')),
+    { ...opts, multiline: true, placeholder: 'One per line' });
+}
+
+function boolChoice(value) {
+  const typed = typedScalar(value);
+  return typed === true ? 'true' : typed === false ? 'false' : '';
+}
+
+// Text for plain values, YAML for nested ones (e.g. from an imported file).
+function valueRow(label, value, onEdit, opts) {
+  return value !== null && typeof value === 'object'
+    ? structuredRow(label, value, onEdit, opts)
+    : fieldRow(label, value, onEdit, { ...opts, multiline: true });
+}
+
+function argRow(item, name) {
+  const value = item.moduleArgs[name];
+  const spec = argSpec(moduleInfo(item.params.module), name);
+  const label = spec?.required ? `${name} *` : name;
+  const opts = { key: `${item.id}:arg:${name}`, onRemove: () => removeModuleArg(item.id, name) };
+  const set = newValue => { item.moduleArgs[name] = newValue; };
+  const isPlainList = Array.isArray(value) && value.every(v => v === null || typeof v !== 'object');
+  if (spec?.kind === 'list' && (isPlainList || typeof value === 'string')) return listRow(label, value, set, opts);
+  if (spec?.kind === 'yaml' || (value !== null && typeof value === 'object')) return structuredRow(label, value, set, opts);
+  if (spec?.kind === 'bool' && boolChoice(value)) {
+    return selectRow(label, boolChoice(value), [['true', 'true'], ['false', 'false']], v => set(v === 'true'), opts);
   }
-  if (canHaveRescue) {
-    item.rescue.forEach(c => containers[dzIndex].appendChild(buildUI(c)));
-    dzIndex += 1;
-    item.always.forEach(c => containers[dzIndex].appendChild(buildUI(c)));
+  if (spec?.kind === 'choice' && (value === '' || spec.choices.includes(String(value)))) {
+    return selectRow(label, String(value), spec.choices.map(c => [c, c]), set, opts);
   }
-  
-  return div;
+  return fieldRow(label, value, set, { ...opts, multiline: spec?.kind !== 'int' });
+}
+
+function addMenu(label, names, onPick) {
+  return el('select', {
+    className: 'btn-ui',
+    attrs: { 'aria-label': label },
+    onchange: e => {
+      const picked = e.target.value;
+      e.target.value = '';
+      if (picked) onPick(picked === OTHER ? null : picked);
+    }
+  }, [
+    el('option', { value: '', text: label }),
+    ...names.map(([value, text]) => el('option', { value, text })),
+    el('option', { value: OTHER, text: 'Other…' })
+  ]);
+}
+
+function nameRow(item, title) {
+  return fieldRow('name', item.params.name, text => {
+    item.params.name = text;
+    title.textContent = text;
+  }, { key: `${item.id}:name` });
+}
+
+function moduleRow(item) {
+  const current = item.params.module;
+  const groups = MODULE_GROUPS.map(group => el('optgroup', { label: group },
+    MODULES.filter(m => m.group === group).map(m => el('option', { value: m.name, text: m.label, selected: m.name === current }))));
+  if (!moduleInfo(current)) groups.push(el('optgroup', { label: 'Other' }, [el('option', { value: current, text: current, selected: true })]));
+  const select = el('select', { className: 'f-input', onchange: e => changeTaskModule(item.id, e.target.value) }, groups);
+  select.dataset.key = `${item.id}:module`;
+  return row('module', select);
+}
+
+function metadataRows(item) {
+  return [
+    fieldRow('when', item.when, text => { item.when = text; }, { multiline: true, key: `${item.id}:when` }),
+    fieldRow('tags', item.tags, text => { item.tags = text; }, { key: `${item.id}:tags` }),
+    fieldRow('become', item.become, text => { item.become = text; }, { key: `${item.id}:become` })
+  ];
+}
+
+function customRows(item) {
+  const unused = KEYWORDS[item.type].filter(k => !item.custom.some(c => c.k === k)).map(k => [k, k]);
+  return [
+    ...item.custom.map((c, i) => valueRow(c.k, c.v, value => { c.v = value; },
+      { key: `${item.id}:custom:${i}`, onRemove: () => removeParam(item.id, i) })),
+    el('div', { className: 'add-row' }, [addMenu('+ Add keyword…', unused, name => addParam(item.id, name))])
+  ];
+}
+
+function varRows(item, title, addLabel) {
+  return [
+    sectionHead(title),
+    ...item.vars.map((v, i) => valueRow(v.k, v.v, value => { v.v = value; },
+      { key: `${item.id}:var:${i}`, onRemove: () => removeVar(item.id, i) })),
+    el('div', { className: 'add-row' }, [el('button', { className: 'btn-ui', type: 'button', text: addLabel, onclick: () => addVar(item.id) })])
+  ];
+}
+
+function dropZone(item, section, hint) {
+  const zone = el('div', { className: 'dz', attrs: { 'data-hint': hint } },
+    item[section].map((child, index, siblings) => buildUI(child, index, siblings)));
+  return wireZone(zone, item.id, section);
+}
+
+function nestedArea(item, sections) {
+  return el('div', { className: 'nested-wrap' }, sections.flatMap(([section, heading, hint, extraClass]) => [
+    sectionHead(heading, extraClass),
+    dropZone(item, section, hint)
+  ]));
+}
+
+function playFields(item, title) {
+  return [
+    nameRow(item, title),
+    fieldRow('hosts', item.params.hosts, text => { item.params.hosts = text; }, { key: `${item.id}:hosts` }),
+    fieldRow('connection', item.params.connection, text => { item.params.connection = text; },
+      { key: `${item.id}:connection`, list: 'connection-options', placeholder: 'default (ssh)' }),
+    selectRow('gather_facts', boolChoice(item.params.gather_facts), [['', 'default'], ['true', 'true'], ['false', 'false']],
+      value => { item.params.gather_facts = value; }, { key: `${item.id}:gather_facts` }),
+    ...customRows(item),
+    ...varRows(item, 'Play Vars', '+ Add play var'),
+    nestedArea(item, [
+      ['children', 'Tasks', 'Drop tasks or blocks here'],
+      ['handlers', 'Handlers', 'Drop tasks here to run them when notified']
+    ])
+  ];
+}
+
+function taskFields(item, title) {
+  const module = moduleInfo(item.params.module);
+  const unusedArgs = module
+    ? Object.keys(module.args).filter(name => ![name, ...(argSpec(module, name).aliases || [])].some(n => n in item.moduleArgs))
+      .map(name => [name, argSpec(module, name).required ? `${name} (required)` : name])
+    : [];
+  return [
+    nameRow(item, title),
+    moduleRow(item),
+    sectionHead('Module Arguments'),
+    ...Object.keys(item.moduleArgs).map(name => argRow(item, name)),
+    el('div', { className: 'add-row' }, [addMenu('+ Add module argument…', unusedArgs, name => addModuleArg(item.id, name))]),
+    sectionHead('Task Metadata'),
+    ...metadataRows(item),
+    ...customRows(item)
+  ];
+}
+
+function blockFields(item, title) {
+  return [
+    nameRow(item, title),
+    sectionHead('Block Metadata'),
+    ...metadataRows(item),
+    ...customRows(item),
+    ...varRows(item, 'Block Vars', '+ Add block var'),
+    nestedArea(item, [
+      ['children', 'Tasks', 'Drop tasks or blocks here'],
+      ['rescue', 'Rescue (On Failure)', 'Runs if a task above fails', 'rescue'],
+      ['always', 'Always', 'Runs whether or not anything failed', 'always']
+    ])
+  ];
+}
+
+function buildUI(item, index, siblings) {
+  const block = el('div', { className: `cblock ${item.type}${item.collapsed ? ' collapsed' : ''}`, attrs: { 'data-id': item.id, 'data-type': item.type } });
+  const title = el('span', { text: item.params.name || '' });
+  const toggle = el('button', {
+    className: 'btn-toggle', type: 'button', text: item.collapsed ? '▶' : '▼', title: 'Collapse or expand',
+    attrs: { 'aria-expanded': String(!item.collapsed), 'aria-label': 'Collapse or expand' },
+    onclick: () => toggleCollapsed(item, block, toggle)
+  });
+  const head = el('div', {
+    className: 'bhead', draggable: true, title: 'Drag to move',
+    ondragstart: e => {
+      e.stopPropagation();
+      startDrag(e, { moveId: item.id, type: item.type });
+      e.dataTransfer.setDragImage(block, 20, 20);
+      block.classList.add('dragging');
+    }
+  }, [
+    toggle,
+    el('span', { className: 'btitle' }, [
+      el('strong', { text: item.type.toUpperCase() }), ' ', title,
+      item.type === 'task' && el('span', { className: 'bmod', text: item.params.module || '' })
+    ]),
+    el('span', { className: 'bactions' }, [
+      iconButton('↑', 'Move up', () => moveBy(item.id, -1), { disabled: index === 0, key: `${item.id}:up` }),
+      iconButton('↓', 'Move down', () => moveBy(item.id, 1), { disabled: index === siblings.length - 1, key: `${item.id}:down` }),
+      iconButton('⧉', 'Duplicate', () => duplicateItem(item.id)),
+      iconButton('×', 'Delete', () => deleteItem(item.id), { extraClass: 'danger' })
+    ])
+  ]);
+  const fields = item.type === 'play' ? playFields(item, title) : item.type === 'task' ? taskFields(item, title) : blockFields(item, title);
+  block.append(head, el('div', { className: 'bbody', hidden: item.collapsed }, fields));
+  return block;
+}
+
+function libraryItem(label, data) {
+  return el('div', {
+    className: 'bitem', draggable: true, tabIndex: 0, text: label,
+    attrs: { role: 'button' },
+    ondragstart: e => startDrag(e, data),
+    onclick: () => addFromLibrary(data),
+    onkeydown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        addFromLibrary(data);
+      }
+    }
+  });
+}
+
+function buildLibrary() {
+  const group = (heading, items, open) => el('details', { open }, [el('summary', { text: heading }), el('div', {}, items)]);
+  document.getElementById('library').replaceChildren(
+    ...Object.entries(PLAY_PRESETS).map(([preset, p]) => libraryItem(p.label, { type: 'play', preset })),
+    ...MODULE_GROUPS.map((heading, i) => group(heading,
+      MODULES.filter(m => m.group === heading).map(m => libraryItem(m.label, { type: 'task', module: m.name })), i === 0)),
+    group('Logic', [libraryItem('Logic Block (Try/Catch)', { type: 'block' })], false)
+  );
+}
+
+// ---- YAML output -------------------------------------------------------------------
+
+// Fields hold plain text. Empty text, booleans and integers become real YAML values,
+// so `gather_facts: no` and `retries: 3` mean what they did when the output was
+// unquoted. Everything else stays a string (including decimals like 15.10, which
+// would otherwise lose digits) and js-yaml quotes it wherever YAML would misread it.
+function typedScalar(value) {
+  if (typeof value !== 'string') return value;
+  const text = value.trim();
+  if (text === '') return null;
+  if (/^(true|yes|on)$/i.test(text)) return true;
+  if (/^(false|no|off)$/i.test(text)) return false;
+  if (/^(0|-?[1-9]\d*)$/.test(text) && Number.isSafeInteger(Number(text))) return Number(text);
+  return value;
+}
+
+// Module arguments documented as strings, lists or choices are never converted,
+// so `cmd: true` runs the `true` command rather than becoming a boolean.
+function typedArgs(module, args) {
+  return Object.fromEntries(Object.entries(args).map(([name, value]) => {
+    const kind = argSpec(module, name)?.kind;
+    const keepText = typeof value === 'string' && kind && kind !== 'int' && kind !== 'bool';
+    return [name, keepText ? (value.trim() === '' ? null : value) : typedScalar(value)];
+  }));
+}
+
+function typedPairs(pairs) {
+  return Object.fromEntries(pairs.map(({ k, v }) => [k, typedScalar(v)]));
+}
+
+// Plays dropped inside other items by older versions are left out (and warned about).
+function buildItems(items) {
+  return items.filter(item => item.type !== 'play').map(item => buildItemObject(item));
 }
 
 function buildPlaybookObject() {
   return state.map(play => {
     const p = {
       name: play.params.name,
-      hosts: play.params.hosts,
-      gather_facts: play.params.gather_facts
+      hosts: play.params.hosts
     };
-    if (play.vars && play.vars.length) {
-      p.vars = {};
-      play.vars.forEach(v => p.vars[v.k] = v.v);
-    }
-    play.custom.forEach(c => p[c.k] = c.v);
-    if (play.children.length) {
-      p.tasks = play.children.map(c => buildItemObject(c));
-    }
+    if (play.params.connection) p.connection = play.params.connection;
+    const gatherFacts = typedScalar(play.params.gather_facts);
+    if (gatherFacts !== null && gatherFacts !== undefined) p.gather_facts = gatherFacts;
+    if (play.vars.length) p.vars = typedPairs(play.vars);
+    Object.assign(p, typedPairs(play.custom));
+    const tasks = buildItems(play.children);
+    if (tasks.length) p.tasks = tasks;
+    const handlers = buildItems(play.handlers);
+    if (handlers.length) p.handlers = handlers;
     return p;
   });
 }
@@ -623,100 +1336,163 @@ function buildItemObject(item) {
   if (item.type === 'task') {
     const t = {
       name: item.params.name,
-      [item.params.module]: item.moduleArgs
+      [item.params.module]: typedArgs(moduleInfo(item.params.module), item.moduleArgs)
     };
-    item.custom.forEach(c => t[c.k] = c.v);
     if (item.when) t.when = item.when;
     if (item.tags) t.tags = item.tags;
-    if (item.become) t.become = item.become;
-    return t;
+    if (item.become) t.become = typedScalar(item.become);
+    return Object.assign(t, typedPairs(item.custom));
   }
-  if (item.type === 'block') {
-    const b = { block: item.children.map(c => buildItemObject(c)) };
-    if (item.when) b.when = item.when;
-    if (item.tags) b.tags = item.tags;
-    if (item.become) b.become = item.become;
-    if (item.vars && item.vars.length) {
-      b.vars = {};
-      item.vars.forEach(v => b.vars[v.k] = v.v);
-    }
-    item.custom.forEach(c => b[c.k] = c.v);
-    if (item.rescue.length) b.rescue = item.rescue.map(c => buildItemObject(c));
-    if (item.always.length) b.always = item.always.map(c => buildItemObject(c));
-    return b;
-  }
-  return { '#': `Unsupported item type: ${item.type}` };
+  // Block keys come last, as ansible-lint expects.
+  const b = {};
+  if (item.params.name) b.name = item.params.name;
+  if (item.when) b.when = item.when;
+  if (item.tags) b.tags = item.tags;
+  if (item.become) b.become = typedScalar(item.become);
+  if (item.vars.length) b.vars = typedPairs(item.vars);
+  Object.assign(b, typedPairs(item.custom));
+  b.block = buildItems(item.children);
+  if (item.rescue.length) b.rescue = buildItems(item.rescue);
+  if (item.always.length) b.always = buildItems(item.always);
+  return b;
 }
 
 function genYaml() {
-  const playbook = buildPlaybookObject();
-  let y = "---\n" + yamlSerialize(playbook, 0, false);
-  document.getElementById('yaml-out').textContent = y;
-}
-
-function yamlSerialize(obj, indent = 0) {
-  let res = '';
-  const space = ' '.repeat(indent);
-  if (Array.isArray(obj)) {
-    obj.forEach(item => {
-      res += `${space}- ${yamlSerialize(item, 0).trim()}\n`;
-    });
-  } else if (typeof obj === 'object' && obj !== null) {
-    Object.entries(obj).forEach(([k, v]) => {
-      if (Array.isArray(v)) {
-        res += `${space}${k}:\n`;
-        v.forEach(item => {
-          res += `${space}  - ${yamlSerialize(item, 0).trim()}\n`;
-        });
-      } else if (typeof v === 'object' && v !== null) {
-        res += `${space}${k}:\n${yamlSerialize(v, indent + 2)}`;
-      } else {
-        const formatted = yamlValue(v, indent + 2);
-        if (typeof v === 'string' && v.includes('\n')) {
-          res += `${space}${k}: ${formatted}`;
-        } else {
-          res += `${space}${k}: ${formatted}\n`;
-        }
-      }
-    });
-  } else {
-    return yamlValue(obj, indent);
+  const out = document.getElementById('yaml-out');
+  if (!window.jsyaml) {
+    yamlProblem = 'The js-yaml library did not load (are you offline?), so no YAML can be generated.';
+    out.textContent = '';
+    return;
   }
-  return res;
+  const playbook = buildPlaybookObject();
+  try {
+    const yaml = '---\n' + jsyaml.dump(playbook, YAML_OPTIONS);
+    yamlProblem = roundTripProblem(yaml, playbook);
+    out.textContent = yaml;
+  } catch (error) {
+    yamlProblem = `Could not generate YAML: ${error.message}`;
+    out.textContent = '';
+  }
 }
 
-function normalizeItem(item) {
+// Parses the output back and compares it with what was meant, so a serializer
+// problem shows up as a warning instead of a silently broken playbook.
+function roundTripProblem(yaml, playbook) {
+  try {
+    if (JSON.stringify(jsyaml.load(yaml)) === JSON.stringify(playbook)) return null;
+    return 'The generated YAML does not read back as the playbook shown in the builder.';
+  } catch (error) {
+    return `The generated YAML does not parse: ${error.message}`;
+  }
+}
+
+// ---- Loading saved or imported state -------------------------------------------
+
+// Checks that parsed JSON has the builder's shape before it replaces the current
+// state, so a bad file is rejected whole instead of half-loading.
+function validateState(value) {
+  if (!Array.isArray(value)) throw new Error('expected a list of plays');
+  const checkItem = (item, where) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`${where} is not an object`);
+    if (!ITEM_TYPES.includes(item.type)) throw new Error(`${where} has an unknown type`);
+    ['params', 'moduleArgs'].forEach(key => {
+      if (item[key] != null && (typeof item[key] !== 'object' || Array.isArray(item[key]))) throw new Error(`${where} has an invalid "${key}"`);
+    });
+    ['custom', 'vars', ...SECTIONS].forEach(key => {
+      if (item[key] != null && !Array.isArray(item[key])) throw new Error(`${where} has an invalid "${key}"`);
+    });
+    [...(item.custom || []), ...(item.vars || [])].forEach(entry => {
+      if (!entry || typeof entry !== 'object') throw new Error(`${where} has an invalid parameter or var`);
+    });
+    SECTIONS.forEach(key => {
+      (item[key] || []).forEach((child, i) => checkItem(child, `${where} > ${key} ${i + 1}`));
+    });
+  };
+  value.forEach((item, i) => {
+    if (item?.type !== 'play') throw new Error(`top-level item ${i + 1} is not a play`);
+    checkItem(item, `play ${i + 1}`);
+  });
+}
+
+// Older versions stored list arguments (lines, commands, …) as one multi-line string.
+function migrateListArgs(task) {
+  const module = moduleInfo(task.params.module);
+  Object.entries(task.moduleArgs).forEach(([name, value]) => {
+    if (argSpec(module, name)?.kind === 'list' && typeof value === 'string') {
+      task.moduleArgs[name] = value.split('\n').filter(line => line.trim() !== '');
+    }
+  });
+}
+
+function normalizeItem(item, seenIds) {
+  if (typeof item.id !== 'string' || seenIds.has(item.id)) item.id = newId();
+  seenIds.add(item.id);
+  item.params = item.params || {};
+  item.moduleArgs = item.moduleArgs || {};
   item.custom = item.custom || [];
   item.vars = item.vars || [];
-  item.moduleArgs = item.moduleArgs || {};
-  item.children = item.children || [];
-  item.rescue = item.rescue || [];
-  item.always = item.always || [];
-  item.params = item.params || {};
   item.when = item.when || '';
   item.tags = item.tags || '';
   item.become = item.become || '';
-  item.children.forEach(normalizeItem);
-  item.rescue.forEach(normalizeItem);
-  item.always.forEach(normalizeItem);
+  item.collapsed = item.collapsed === true;
+  SECTIONS.forEach(section => { item[section] = item[section] || []; });
+  if (item.type === 'play') {
+    delete item.params.vars;  // an unused text field older versions showed on every play
+    item.params.connection = item.params.connection || '';
+  }
+  if (item.type === 'task') migrateListArgs(item);
+  SECTIONS.forEach(section => item[section].forEach(child => normalizeItem(child, seenIds)));
 }
 
 function normalizeState(stateArray) {
-  (stateArray || []).forEach(normalizeItem);
+  const seenIds = new Set();
+  (stateArray || []).forEach(item => normalizeItem(item, seenIds));
+}
+
+function parseState(json) {
+  const parsed = JSON.parse(json);
+  validateState(parsed);
+  normalizeState(parsed);
+  return parsed;
 }
 
 function initBuilder() {
-  const saved = localStorage.getItem('ansiblePlaybookBuilderState');
+  buildLibrary();
+  const canvas = wireZone(document.getElementById('canvas'), 'root', 'children');
+  canvas.addEventListener('pointerdown', e => setClickTarget(targetFromElement(e.target)));
+  canvas.addEventListener('focusin', e => setClickTarget(targetFromElement(e.target)));
+  document.addEventListener('dragend', endDrag);
+  document.addEventListener('keydown', handleShortcut);
+  // A JSON file dropped anywhere is imported instead of the browser navigating to it.
+  document.addEventListener('dragover', e => {
+    if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+  });
+  document.addEventListener('drop', e => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    e.preventDefault();
+    readImportFile(file);
+  });
+  const saved = readStorage(STORAGE_KEY);
+  let message = '';
   if (saved) {
     try {
-      state = JSON.parse(saved);
-      normalizeState(state);
+      state = parseState(saved);
     } catch (error) {
       console.warn('Invalid saved state skipped', error);
+      try {
+        localStorage.setItem(`${STORAGE_KEY}.unreadable`, saved);
+      } catch (storageError) {
+        // Nothing more can be done without storage.
+      }
+      message = `Your saved work could not be read (${error.message}), so the canvas starts empty. A copy was kept in browser storage under "${STORAGE_KEY}.unreadable".`;
     }
   }
   render();
+  if (message) updateWarnings(message);
 }
 
 initBuilder();
 </script>
+</body>
+</html>
