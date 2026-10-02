@@ -1,0 +1,14 @@
+{
+  "collection": "cisco.ios",
+  "title": "Cisco IOS",
+  "categories": [{ "id": "network", "name": "Network", "color": "#4CC3E6" }],
+  "modules": {
+    "ios_config": { "category": "network", "label": "IOS Config", "palette": ["parents", "lines"] },
+    "ios_command": { "category": "network", "label": "IOS Command", "palette": ["commands"] },
+    "ios_facts": { "category": "network", "label": "IOS Facts", "palette": ["gather_subset"] },
+    "ios_interfaces": { "category": "network", "label": "IOS Interfaces", "palette": ["config", "state"], "defaults": { "state": "merged" } },
+    "ios_l3_interfaces": { "category": "network", "label": "IOS L3 Interfaces", "palette": ["config", "state"], "defaults": { "state": "merged" } },
+    "ios_vlans": { "category": "network", "label": "IOS VLANs", "palette": ["config", "state"], "defaults": { "state": "merged" } },
+    "ios_static_routes": { "category": "network", "label": "IOS Static Routes", "palette": ["config", "state"], "defaults": { "state": "merged" } }
+  }
+}

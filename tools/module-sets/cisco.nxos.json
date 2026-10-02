@@ -1,0 +1,13 @@
+{
+  "collection": "cisco.nxos",
+  "title": "Cisco NX-OS",
+  "categories": [{ "id": "network", "name": "Network", "color": "#4CC3E6" }],
+  "modules": {
+    "nxos_config": { "category": "network", "label": "NXOS Config", "palette": ["parents", "lines"] },
+    "nxos_command": { "category": "network", "label": "NXOS Command", "palette": ["commands"] },
+    "nxos_facts": { "category": "network", "label": "NXOS Facts", "palette": ["gather_subset"] },
+    "nxos_interfaces": { "category": "network", "label": "NXOS Interfaces", "palette": ["config", "state"], "defaults": { "state": "merged" } },
+    "nxos_l3_interfaces": { "category": "network", "label": "NXOS L3 Interfaces", "palette": ["config", "state"], "defaults": { "state": "merged" } },
+    "nxos_vlans": { "category": "network", "label": "NXOS VLANs", "palette": ["config", "state"], "defaults": { "state": "merged" } }
+  }
+}

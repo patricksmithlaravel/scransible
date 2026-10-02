@@ -1,0 +1,9 @@
+{
+  "collection": "ansible.posix",
+  "title": "POSIX",
+  "modules": {
+    "authorized_key": { "category": "access", "palette": ["user", "key"] },
+    "firewalld": { "category": "access", "palette": ["service", "state", "permanent"], "defaults": { "state": "enabled" } },
+    "sysctl": { "category": "utilities", "palette": ["name", "value"] }
+  }
+}
